@@ -9,6 +9,7 @@
 #include "timer.h"
 #include "utils.h"
 #include <ctype.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -120,10 +121,10 @@ int findSolutionAndUpdateMoves(Cube *cube, int depthLimit, int timeOut) {
   return 0;
 }
 
-void findSolutionAndUpdateCurrentSolution() {
+void *findSolutionAndUpdateCurrentSolution(void *thread) {
   if (SIZE != 3) {
     snprintf(currentSolution, 41, "The algorithm only works on 3x3x3 cubes.");
-    return;
+    return NULL;
   }
 
   struct timespec start, now;
@@ -135,7 +136,7 @@ void findSolutionAndUpdateCurrentSolution() {
   clock_gettime(CLOCK_MONOTONIC, &now);
   if (error != 0) {
     snprintf(currentSolution, 75, "%s", printErrorMessage(error));
-    return;
+    return NULL;
   }
 
   long long elapsed_time_ns = (now.tv_sec - start.tv_sec) * 1000000000LL +
@@ -146,6 +147,8 @@ void findSolutionAndUpdateCurrentSolution() {
            (int)elapsed_time_ms);
 
   printf("Solution found in ~%d milliseconds\n", (int)elapsed_time_ms);
+  pthread_join(*(pthread_t *)thread, NULL);
+  return NULL;
 }
 
 void clearCurrentScrambleAndSolution() {
@@ -256,9 +259,12 @@ void handleKeyPress() {
     handleRotation(Z, z);
   else if (IsKeyPressed(KEY_ENTER))
     generateNewScramble();
-  else if (IsKeyPressed(KEY_K))
-    findSolutionAndUpdateCurrentSolution();
-  else if (IsKeyDown(KEY_SPACE) && !timer.isDisabled) {
+  else if (IsKeyPressed(KEY_K)) {
+    pthread_t thread;
+    pthread_create(&thread, NULL, findSolutionAndUpdateCurrentSolution,
+                   (void *)(&thread));
+    // findSolutionAndUpdateCurrentSolution();
+  } else if (IsKeyDown(KEY_SPACE) && !timer.isDisabled) {
     if (!timer.isRunning && !timer.justStopped)
       timerColor = (Color){0, 204, 51, 255};
     else {
