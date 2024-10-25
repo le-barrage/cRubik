@@ -54,10 +54,12 @@ Timer timer;
 Color timerColor = BLACK;
 char timerString[10] = "00:00.000";
 
-bool show = false;
+bool show = false, isSolutionRunning = false;
 int timeToShow = -1, posYToShow = 0;
 
 void handleRotation(Rotation clockwise, Rotation antiClockwise) {
+  if (isSolutionRunning)
+    return;
   if (IsKeyDown(KEY_LEFT_ALT))
     Queue_add(&queue, antiClockwise);
   else
@@ -163,6 +165,7 @@ void generateNewScramble() {
   cube = Cube_make(CUBIE_SIZE);
   generateScramble(scramble, SIZE);
   applyMovesAndUpdateCurrentScramble();
+  timer.isDisabled = false;
 }
 
 void initCameraSettings() {
@@ -198,9 +201,9 @@ void resizeCube(int increment) {
 }
 
 // TODO: Make this function more readable (change if)
-// TODO: Disable timer when applying solution
 void applyCurrentSolution() {
   Timer_disable(&timer);
+  isSolutionRunning = true;
   currentSolutionSize = 0;
   int i = 0;
   char rotation;
@@ -254,13 +257,13 @@ void handleKeyPress() {
     generateNewScramble();
   else if (IsKeyPressed(KEY_K))
     findSolutionAndUpdateCurrentSolution();
-  else if (IsKeyDown(KEY_SPACE)) {
+  else if (IsKeyDown(KEY_SPACE) && !timer.isDisabled) {
     if (!timer.isRunning && !timer.justStopped)
       timerColor = (Color){0, 204, 51, 255};
     else {
       Timer_stop(&timer);
     }
-  } else if (IsKeyReleased(KEY_SPACE)) {
+  } else if (IsKeyReleased(KEY_SPACE) && !timer.isDisabled) {
     if (timer.justStopped) {
       storeTime(timerString, SIZE);
       getTimes(times, SIZE);
@@ -283,8 +286,13 @@ void handleKeyPress() {
 void handleQueue() {
   if (cube.isAnimating)
     return;
-  if (Queue_isEmpty(&queue))
+  if (Queue_isEmpty(&queue)) {
+    if (isSolutionRunning) {
+      isSolutionRunning = false;
+      timer.isDisabled = false;
+    }
     return;
+  }
   cube.isAnimating = true;
   cube.currentRotation = Queue_pop(&queue);
 }
