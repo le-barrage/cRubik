@@ -15,6 +15,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(PLATFORM_WEB)
+#include <emscripten/emscripten.h>
+#endif
+
 #define RAYGUI_IMPLEMENTATION
 #include "include/raygui.h"
 
@@ -60,6 +64,8 @@ char timerString[10] = "00:00.000";
 
 bool show = false;
 int timeToShow = -1, posYToShow = 0;
+
+bool exitProgram = false;
 
 void handleRotation(Rotation clockwise, Rotation antiClockwise) {
   if (isSolutionRunning)
@@ -126,6 +132,7 @@ int findSolutionAndUpdateMoves(Cube *cube, int depthLimit, int timeOut) {
 void *findSolutionAndUpdateCurrentSolution() {
   if (SIZE != 3) {
     snprintf(currentSolution, 41, "The algorithm only works on 3x3x3 cubes.");
+    isThreadLaunched = false;
     return NULL;
   }
 
@@ -138,6 +145,7 @@ void *findSolutionAndUpdateCurrentSolution() {
   clock_gettime(CLOCK_MONOTONIC, &now);
   if (error != 0) {
     snprintf(currentSolution, 75, "%s", printErrorMessage(error));
+    isThreadLaunched = false;
     return NULL;
   }
 
@@ -195,7 +203,7 @@ void resizeCube(int increment) {
   free(scramble);
   Cube_free(cube);
 
-  SIZE += (SIZE == 11 && increment > 0) || (SIZE == 1 && increment < 0)
+  SIZE += (SIZE == MAXSIZE && increment > 0) || (SIZE == 1 && increment < 0)
               ? 0
               : increment;
 
@@ -275,7 +283,7 @@ void handleKeyPress() {
   } else if (IsKeyDown(KEY_SPACE) && !timer.isDisabled) {
     if (!timer.isRunning && !timer.justStopped)
       timerColor = (Color){0, 204, 51, 255};
-    else {
+    else if (!timer.justStopped) {
       Timer_stop(&timer);
     }
   } else if (IsKeyReleased(KEY_SPACE) && !timer.isDisabled) {
@@ -557,7 +565,41 @@ void *initEverything() {
   return NULL;
 }
 
+void UpdateDrawFrame() {
+  if (IsKeyPressed(KEY_H) && !showOptions)
+    showHelp = !showHelp;
+  else if (IsKeyPressed(KEY_O) && !showHelp)
+    showOptions = !showOptions;
+
+  if (!showHelp && !showOptions) {
+    handleMouseMovementAndUpdateCamera();
+    handleKeyPress();
+    handleQueue();
+  }
+
+  BeginDrawing();
+  if (showHelp)
+    drawHelpScreen();
+  else if (showOptions)
+    drawOptionsScreen();
+  else
+    drawCubeScreen();
+  if (showExitMessageBox) {
+    int result =
+        GuiMessageBox((Rectangle){(float)GetScreenWidth() / 2 - 200,
+                                  (float)GetScreenHeight() / 2 - 75, 400, 150},
+                      "#191#Exit", "Do you really want to quit ?", "Yes;No");
+
+    if (result == 1)
+      exitProgram = true;
+    else if (result == 2 || result == 0)
+      showExitMessageBox = false;
+  }
+  EndDrawing();
+}
+
 int main(int argc, char **argv) {
+  printf("Rubik's Cube v1.0\n");
   SetTraceLogLevel(LOG_WARNING);
 
   SetConfigFlags(FLAG_WINDOW_RESIZABLE);
@@ -587,38 +629,16 @@ int main(int argc, char **argv) {
     for (int i = 1; i < argc; i++)
       Cube_applyMove(&cube, argv[i]);
 
+#if defined(PLATFORM_WEB)
+  emscripten_set_main_loop(UpdateDrawFrame, 0, 1);
+#else
+
   while (!WindowShouldClose()) {
-    if (IsKeyPressed(KEY_H) && !showOptions)
-      showHelp = !showHelp;
-    else if (IsKeyPressed(KEY_O) && !showHelp)
-      showOptions = !showOptions;
-
-    if (!showHelp && !showOptions) {
-      handleMouseMovementAndUpdateCamera();
-      handleKeyPress();
-      handleQueue();
-    }
-
-    BeginDrawing();
-    if (showHelp)
-      drawHelpScreen();
-    else if (showOptions)
-      drawOptionsScreen();
-    else
-      drawCubeScreen();
-    if (showExitMessageBox) {
-      int result = GuiMessageBox(
-          (Rectangle){(float)GetScreenWidth() / 2 - 200,
-                      (float)GetScreenHeight() / 2 - 75, 400, 150},
-          "#191#Exit", "Do you really want to quit ?", "Yes;No");
-
-      if (result == 1)
-        break;
-      else if (result == 2 || result == 0)
-        showExitMessageBox = false;
-    }
-    EndDrawing();
+    UpdateDrawFrame();
+    if (exitProgram)
+      break;
   }
+#endif
 
   free(currentScramble);
   free(scramble);

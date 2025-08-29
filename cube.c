@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int SIZE = 3, ROTATIONSPEED = 5;
+int SIZE = 3, MAXSIZE = 9, ROTATIONSPEED = 25;
 
 bool isInnerCubie(float x, float y, float z) {
   return x != 0 && y != 0 && z != 0 && x != SIZE - 1 && y != SIZE - 1 &&
@@ -29,6 +29,7 @@ Cube Cube_make(float cubletSize) {
   }
   cube.isAnimating = false;
   cube.rotationDegrees = 0;
+  cube.currentRotation = -1;
   return cube;
 }
 

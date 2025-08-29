@@ -63,6 +63,7 @@ int countLines(FILE *fp) {
   while ((read = getline(&line, &len, fp)) != -1)
     count++;
 
+  free(line);
   rewind(fp);
   return count;
 }

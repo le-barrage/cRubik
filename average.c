@@ -127,54 +127,175 @@ void getAverageOf5(char times[5][20], char avg[10]) {
   snprintf(avg, 17, "%02d:%02d.%03d", minutes, seconds, milliseconds);
 }
 
+// void setDNF(int index, int cubeSize) {
+//   char filename[20];
+//   getFileName(filename, cubeSize);
+//
+//   FILE *fp = fopen(filename, "r");
+//   int lineNumber = countLines(fp);
+//   fclose(fp);
+//
+//   int targetLine = lineNumber < 5 ? index + 1 : lineNumber - 4 + index;
+//
+//   char command[64];
+//   snprintf(command, 64, "sed -i '%d {/^D/! s/.*/DNF(&)/}' times/%d.time",
+//            targetLine, cubeSize);
+//
+//   system(command);
+// }
+// void setPlusTwo(int index, int cubeSize) {
+//   char filename[20], command[86], path[1024];
+//   getFileName(filename, cubeSize);
+//
+//   FILE *fp = fopen(filename, "r");
+//   int lineNumber = countLines(fp);
+//   fclose(fp);
+//
+//   int targetLine = lineNumber < 5 ? index + 1 : lineNumber - 4 + index;
+//   snprintf(command, sizeof(command), "sed -n '%dp' %s", targetLine,
+//   filename);
+//
+//   fp = popen(command, "r");
+//   if (fp == NULL) {
+//     printf("Failed to run command\n");
+//     exit(1);
+//   }
+//
+//   if (fgets(path, sizeof(path), fp) != NULL) {
+//     int time = timeToMillis(path) + 2000;
+//     int minutes = getMinutesFromMillis(time);
+//     int seconds = getSecondsFromMillis(time);
+//     int milliseconds = getMillisFromMillis(time);
+//
+//     char newTime[20];
+//     snprintf(newTime, sizeof(newTime), "%02d:%02d.%03d+", minutes, seconds,
+//              milliseconds);
+//
+//     snprintf(command, sizeof(command), "sed -i '%ds/.*/%s/' %s", targetLine,
+//              newTime, filename);
+//     system(command);
+//   } else
+//     printf("No output from command\n");
+//
+//   pclose(fp);
+// }
+
 void setDNF(int index, int cubeSize) {
   char filename[20];
   getFileName(filename, cubeSize);
 
   FILE *fp = fopen(filename, "r");
-  int lineNumber = countLines(fp);
-  fclose(fp);
+  if (!fp) {
+    perror("Error opening file for reading");
+    return;
+  }
 
+  int lineNumber = countLines(fp);
   int targetLine = lineNumber < 5 ? index + 1 : lineNumber - 4 + index;
 
-  char command[64];
-  snprintf(command, 64, "sed -i '%d {/^D/! s/.*/DNF(&)/}' times/%d.time",
-           targetLine, cubeSize);
+  rewind(fp);
+  char **lines = malloc(lineNumber * sizeof(char *));
+  char buffer[256];
+  int i = 0;
+  while (fgets(buffer, sizeof(buffer), fp)) {
+    lines[i] = strdup(buffer);
+    i++;
+  }
+  fclose(fp);
 
-  system(command);
+  if (targetLine >= 1 && targetLine <= lineNumber) {
+    char *line = lines[targetLine - 1];
+    if (line[0] != 'D') {
+      size_t len = strlen(line);
+      if (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
+        line[len - 1] = '\0';
+      }
+
+      char newLine[256];
+      snprintf(newLine, sizeof(newLine), "DNF(%s)\n", line);
+
+      free(line);
+      lines[targetLine - 1] = strdup(newLine);
+    }
+  }
+
+  fp = fopen(filename, "w");
+  if (!fp) {
+    perror("Error opening file for writing");
+    for (i = 0; i < lineNumber; i++)
+      free(lines[i]);
+    free(lines);
+    return;
+  }
+  for (i = 0; i < lineNumber; i++) {
+    fputs(lines[i], fp);
+    free(lines[i]);
+  }
+  free(lines);
+  fclose(fp);
 }
+
 void setPlusTwo(int index, int cubeSize) {
-  char filename[20], command[86], path[1024];
+  char filename[20];
   getFileName(filename, cubeSize);
 
   FILE *fp = fopen(filename, "r");
-  int lineNumber = countLines(fp);
-  fclose(fp);
-
-  int targetLine = lineNumber < 5 ? index + 1 : lineNumber - 4 + index;
-  snprintf(command, sizeof(command), "sed -n '%dp' %s", targetLine, filename);
-
-  fp = popen(command, "r");
-  if (fp == NULL) {
-    printf("Failed to run command\n");
-    exit(1);
+  if (!fp) {
+    perror("Error opening file for reading");
+    return;
   }
 
-  if (fgets(path, sizeof(path), fp) != NULL) {
-    int time = timeToMillis(path) + 2000;
-    int minutes = getMinutesFromMillis(time);
-    int seconds = getSecondsFromMillis(time);
-    int milliseconds = getMillisFromMillis(time);
+  int lineNumber = countLines(fp);
+  int targetLine = lineNumber < 5 ? index + 1 : lineNumber - 4 + index;
 
-    char newTime[20];
-    snprintf(newTime, sizeof(newTime), "%02d:%02d.%03d+", minutes, seconds,
-             milliseconds);
+  rewind(fp);
+  char **lines = malloc(lineNumber * sizeof(char *));
+  char buffer[256];
+  int i = 0;
+  while (fgets(buffer, sizeof(buffer), fp)) {
+    lines[i] = strdup(buffer);
+    i++;
+  }
+  fclose(fp);
 
-    snprintf(command, sizeof(command), "sed -i '%ds/.*/%s/' %s", targetLine,
-             newTime, filename);
-    system(command);
-  } else
-    printf("No output from command\n");
+  if (targetLine >= 1 && targetLine <= lineNumber) {
+    char *line = lines[targetLine - 1];
 
-  pclose(fp);
+    size_t len = strlen(line);
+    if (len > 0 && (line[len - 1] == '\n' || line[len - 1] == '\r')) {
+      line[len - 1] = '\0';
+      len--;
+    }
+
+    if (len > 0 && line[len - 1] == '+') {
+      goto end;
+    }
+
+    int timeMs = timeToMillis(line) + 2000;
+    int min = getMinutesFromMillis(timeMs);
+    int sec = getSecondsFromMillis(timeMs);
+    int millis = getMillisFromMillis(timeMs);
+
+    char newLine[32];
+    snprintf(newLine, sizeof(newLine), "%02d:%02d.%03d+\n", min, sec, millis);
+
+    free(line);
+    lines[targetLine - 1] = strdup(newLine);
+  }
+
+  fp = fopen(filename, "w");
+  if (!fp) {
+    perror("Error opening file for writing");
+    for (i = 0; i < lineNumber; i++)
+      free(lines[i]);
+    free(lines);
+    return;
+  }
+end:
+  for (i = 0; i < lineNumber; i++) {
+    fputs(lines[i], fp);
+    free(lines[i]);
+  }
+  free(lines);
+  fclose(fp);
 }

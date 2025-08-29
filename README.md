@@ -17,6 +17,7 @@ Sources:
 - https://www.speedsolving.com/wiki/index.php/Scrambling
 
 - https://github.com/hkociemba/CubeExplorer
+- https://github.com/hishamcse/Rubiks-Cube-Solver
 
 ## Current functionalities:
 
