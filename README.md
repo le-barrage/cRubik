@@ -1,5 +1,7 @@
 # RubiksCube
 
+![](./rubiks.gif)
+
 Sources:
 
 - https://www.raylib.com/examples.html
