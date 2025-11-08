@@ -1,4 +1,5 @@
 #include "cube.h"
+#include "cublet.h"
 #include "include/raylib.h"
 #include "utils.h"
 #include <ctype.h>
@@ -502,6 +503,27 @@ Cube_rotate (Cube *cube, Rotation rotation, int numberOfLayers)
     }
 }
 
+char
+Cube_getFaceFromColor (Cubie cubie, Face face)
+{
+  Color color = cubie.colors[face];
+
+  if (colorsEqual (color, WHITE))
+    return 'U';
+  else if (colorsEqual (color, GREEN))
+    return 'F';
+  else if (colorsEqual (color, RED))
+    return 'R';
+  else if (colorsEqual (color, BLUE))
+    return 'B';
+  else if (colorsEqual (color, ORANGE))
+    return 'L';
+  else if (colorsEqual (color, YELLOW))
+    return 'D';
+  else
+    return '?';
+}
+
 char *
 Cube_toString (Cube *cube, char cubeStr[55])
 {
@@ -509,107 +531,40 @@ Cube_toString (Cube *cube, char cubeStr[55])
   for (int z = 0; z < SIZE; z++)
     for (int x = 0; x < SIZE; x++)
       {
-        if (colorsEqual (cube->cube[x][SIZE - 1][z].colors[UP], WHITE))
-          cubeStr[index] = 'U';
-        else if (colorsEqual (cube->cube[x][SIZE - 1][z].colors[UP], GREEN))
-          cubeStr[index] = 'F';
-        else if (colorsEqual (cube->cube[x][SIZE - 1][z].colors[UP], RED))
-          cubeStr[index] = 'R';
-        else if (colorsEqual (cube->cube[x][SIZE - 1][z].colors[UP], BLUE))
-          cubeStr[index] = 'B';
-        else if (colorsEqual (cube->cube[x][SIZE - 1][z].colors[UP], ORANGE))
-          cubeStr[index] = 'L';
-        else if (colorsEqual (cube->cube[x][SIZE - 1][z].colors[UP], YELLOW))
-          cubeStr[index] = 'D';
+        cubeStr[index]
+            = Cube_getFaceFromColor (cube->cube[x][SIZE - 1][z], UP);
         index++;
       }
   for (int x = SIZE - 1; x >= 0; x--)
     for (int z = SIZE - 1; z >= 0; z--)
       {
-        if (colorsEqual (cube->cube[SIZE - 1][x][z].colors[RIGHT], WHITE))
-          cubeStr[index] = 'U';
-        else if (colorsEqual (cube->cube[SIZE - 1][x][z].colors[RIGHT], GREEN))
-          cubeStr[index] = 'F';
-        else if (colorsEqual (cube->cube[SIZE - 1][x][z].colors[RIGHT], RED))
-          cubeStr[index] = 'R';
-        else if (colorsEqual (cube->cube[SIZE - 1][x][z].colors[RIGHT], BLUE))
-          cubeStr[index] = 'B';
-        else if (colorsEqual (cube->cube[SIZE - 1][x][z].colors[RIGHT],
-                              ORANGE))
-          cubeStr[index] = 'L';
-        else if (colorsEqual (cube->cube[SIZE - 1][x][z].colors[RIGHT],
-                              YELLOW))
-          cubeStr[index] = 'D';
+        cubeStr[index]
+            = Cube_getFaceFromColor (cube->cube[SIZE - 1][x][z], RIGHT);
         index++;
       }
   for (int z = SIZE - 1; z >= 0; z--)
     for (int x = 0; x < SIZE; x++)
       {
-        if (colorsEqual (cube->cube[x][z][SIZE - 1].colors[FRONT], WHITE))
-          cubeStr[index] = 'U';
-        else if (colorsEqual (cube->cube[x][z][SIZE - 1].colors[FRONT], GREEN))
-          cubeStr[index] = 'F';
-        else if (colorsEqual (cube->cube[x][z][SIZE - 1].colors[FRONT], RED))
-          cubeStr[index] = 'R';
-        else if (colorsEqual (cube->cube[x][z][SIZE - 1].colors[FRONT], BLUE))
-          cubeStr[index] = 'B';
-        else if (colorsEqual (cube->cube[x][z][SIZE - 1].colors[FRONT],
-                              ORANGE))
-          cubeStr[index] = 'L';
-        else if (colorsEqual (cube->cube[x][z][SIZE - 1].colors[FRONT],
-                              YELLOW))
-          cubeStr[index] = 'D';
+        cubeStr[index]
+            = Cube_getFaceFromColor (cube->cube[x][z][SIZE - 1], FRONT);
         index++;
       }
   for (int z = SIZE - 1; z >= 0; z--)
     for (int x = 0; x < SIZE; x++)
       {
-        if (colorsEqual (cube->cube[x][0][z].colors[DOWN], WHITE))
-          cubeStr[index] = 'U';
-        else if (colorsEqual (cube->cube[x][0][z].colors[DOWN], GREEN))
-          cubeStr[index] = 'F';
-        else if (colorsEqual (cube->cube[x][0][z].colors[DOWN], RED))
-          cubeStr[index] = 'R';
-        else if (colorsEqual (cube->cube[x][0][z].colors[DOWN], BLUE))
-          cubeStr[index] = 'B';
-        else if (colorsEqual (cube->cube[x][0][z].colors[DOWN], ORANGE))
-          cubeStr[index] = 'L';
-        else if (colorsEqual (cube->cube[x][0][z].colors[DOWN], YELLOW))
-          cubeStr[index] = 'D';
+        cubeStr[index] = Cube_getFaceFromColor (cube->cube[x][0][z], DOWN);
         index++;
       }
   for (int x = SIZE - 1; x >= 0; x--)
     for (int z = 0; z < SIZE; z++)
       {
-        if (colorsEqual (cube->cube[0][x][z].colors[LEFT], WHITE))
-          cubeStr[index] = 'U';
-        else if (colorsEqual (cube->cube[0][x][z].colors[LEFT], GREEN))
-          cubeStr[index] = 'F';
-        else if (colorsEqual (cube->cube[0][x][z].colors[LEFT], RED))
-          cubeStr[index] = 'R';
-        else if (colorsEqual (cube->cube[0][x][z].colors[LEFT], BLUE))
-          cubeStr[index] = 'B';
-        else if (colorsEqual (cube->cube[0][x][z].colors[LEFT], ORANGE))
-          cubeStr[index] = 'L';
-        else if (colorsEqual (cube->cube[0][x][z].colors[LEFT], YELLOW))
-          cubeStr[index] = 'D';
+        cubeStr[index] = Cube_getFaceFromColor (cube->cube[0][x][z], LEFT);
         index++;
       }
   for (int z = SIZE - 1; z >= 0; z--)
     for (int x = SIZE - 1; x >= 0; x--)
       {
-        if (colorsEqual (cube->cube[x][z][0].colors[BACK], WHITE))
-          cubeStr[index] = 'U';
-        else if (colorsEqual (cube->cube[x][z][0].colors[BACK], GREEN))
-          cubeStr[index] = 'F';
-        else if (colorsEqual (cube->cube[x][z][0].colors[BACK], RED))
-          cubeStr[index] = 'R';
-        else if (colorsEqual (cube->cube[x][z][0].colors[BACK], BLUE))
-          cubeStr[index] = 'B';
-        else if (colorsEqual (cube->cube[x][z][0].colors[BACK], ORANGE))
-          cubeStr[index] = 'L';
-        else if (colorsEqual (cube->cube[x][z][0].colors[BACK], YELLOW))
-          cubeStr[index] = 'D';
+        cubeStr[index] = Cube_getFaceFromColor (cube->cube[x][z][0], BACK);
         index++;
       }
   cubeStr[index] = '\0';
