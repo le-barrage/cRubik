@@ -25,6 +25,8 @@
 #define CUBIE_SIZE 1.0
 #define BACKGROUND_COLOR GRAY
 
+#define DEFAULT_FONT_SIZE 20
+
 float camera_mag;
 float camera_mag_vel;
 float camera_theta;
@@ -418,7 +420,7 @@ drawHelpScreen ()
       fmin (floor ((float)(GetScreenWidth () - 100) / 400) * 10, 40), 18);
 
   ClearBackground (BACKGROUND_COLOR);
-  DrawText ("Press 'h' to exit.", 10, 10, 20, DARKGRAY);
+  DrawText ("Press 'h' to exit.", 10, 10, DEFAULT_FONT_SIZE, DARKGRAY);
   int heightRoomForText = 50;
   int startY = GetScreenHeight () / 2 - helpTextsSize / 2 * 50;
   for (int i = 0; i < helpTextsSize; i++)
@@ -446,15 +448,18 @@ rotationSpeedSlider ()
       ROTATIONSPEED = (int)r;
     }
   char *crs = "Cube Rotation Speed:";
-  DrawText (crs,
-            sliderRectangle.x
-                + (sliderRectangle.width - MeasureText (crs, 20)) / 2,
-            sliderRectangle.y - 30, 20, BLACK);
+  DrawText (
+      crs,
+      sliderRectangle.x
+          + (sliderRectangle.width - MeasureText (crs, DEFAULT_FONT_SIZE)) / 2,
+      sliderRectangle.y - 30, DEFAULT_FONT_SIZE, BLACK);
   const char *rs = TextFormat ("%d", ROTATIONSPEED);
   DrawText (rs,
             sliderRectangle.x
-                + (sliderRectangle.width - MeasureText (rs, 20)) / 2,
-            sliderRectangle.y + sliderRectangle.height + 10, 20, BLACK);
+                + (sliderRectangle.width - MeasureText (rs, DEFAULT_FONT_SIZE))
+                      / 2,
+            sliderRectangle.y + sliderRectangle.height + 10, DEFAULT_FONT_SIZE,
+            BLACK);
 }
 
 // TODO: save options to a file
@@ -462,9 +467,9 @@ void
 drawOptionsScreen ()
 {
   ClearBackground (BACKGROUND_COLOR);
-  int textWidth = MeasureText ("Press 'o' to exit.", 20);
-  DrawText ("Press 'o' to exit.", GetScreenWidth () - textWidth - 10, 10, 20,
-            DARKGRAY);
+  int textWidth = MeasureText ("Press 'o' to exit.", DEFAULT_FONT_SIZE);
+  DrawText ("Press 'o' to exit.", GetScreenWidth () - textWidth - 10, 10,
+            DEFAULT_FONT_SIZE, DARKGRAY);
   rotationSpeedSlider ();
 }
 
@@ -478,7 +483,7 @@ DrawTextBoxed (const char *text, float fontSize, int y)
   char *dup = strdup (text);
   char *lastSpacePtr = strrchr (dup, ' ');
   lastSpace = (lastSpacePtr != NULL) ? lastSpacePtr - dup : -1;
-  while (MeasureText (dup, fontSize) > GetScreenWidth () - 20)
+  while (MeasureText (dup, fontSize) > GetScreenWidth () - DEFAULT_FONT_SIZE)
     {
       if (lastSpace == -1)
         break;
@@ -515,15 +520,15 @@ drawCubeScreen ()
   Cube_drawCube (&cube);
   EndMode3D ();
 
-  DrawText ("Press 'h' for help.", 10, 10, 20, DARKGRAY);
-  int textWidth = MeasureText ("Press 'o' for options. ", 20);
+  DrawText ("Press 'h' for help.", 10, 10, DEFAULT_FONT_SIZE, DARKGRAY);
+  int textWidth = MeasureText ("Press 'o' for options. ", DEFAULT_FONT_SIZE);
   DrawText ("Press 'o' for options.", GetScreenWidth () - textWidth - 10, 10,
-            20, DARKGRAY);
+            DEFAULT_FONT_SIZE, DARKGRAY);
 
   DrawText ("Current scramble:",
             GetScreenWidth () / 2 - MeasureText ("Current scramble:", 30) / 2,
             10, 30, BLACK);
-  DrawTextBoxed (currentScramble, 20, 50);
+  DrawTextBoxed (currentScramble, DEFAULT_FONT_SIZE, 50);
 
   Timer_update (&timer);
   updateTimerString ();
@@ -533,13 +538,15 @@ drawCubeScreen ()
 
   if (currentSolutionSize != 0)
     DrawText (solutionFoundText,
-              GetScreenWidth () / 2 - MeasureText (solutionFoundText, 20) / 2,
-              GetScreenHeight () - 130, 20, BLACK);
-  DrawTextBoxed (currentSolution, 20, GetScreenHeight () - 100);
+              GetScreenWidth () / 2
+                  - MeasureText (solutionFoundText, DEFAULT_FONT_SIZE) / 2,
+              GetScreenHeight () - 130, DEFAULT_FONT_SIZE, BLACK);
+  DrawTextBoxed (currentSolution, DEFAULT_FONT_SIZE, GetScreenHeight () - 100);
 
-  DrawText ("Ao5:", 10, GetScreenHeight () / 2 - 100, 20, BLACK);
-  DrawText (avg, 20 + MeasureText ("Ao5:", 20), GetScreenHeight () / 2 - 100,
-            20, BLACK);
+  DrawText ("Ao5:", 10, GetScreenHeight () / 2 - 100, DEFAULT_FONT_SIZE,
+            BLACK);
+  DrawText (avg, DEFAULT_FONT_SIZE + MeasureText ("Ao5:", DEFAULT_FONT_SIZE),
+            GetScreenHeight () / 2 - 100, DEFAULT_FONT_SIZE, BLACK);
   int posY = -2;
   for (int i = 4; i >= 0; i--)
     {
@@ -547,7 +554,8 @@ drawCubeScreen ()
         continue;
       if (GuiLabelButton (
               (Rectangle){ 10, (float)GetScreenHeight () / 2 + posY * 30,
-                           MeasureText (times[i], 20), 20 },
+                           MeasureText (times[i], DEFAULT_FONT_SIZE),
+                           DEFAULT_FONT_SIZE },
               times[i]))
         {
           show = !show;
@@ -604,7 +612,7 @@ drawCubeScreen ()
           SetMouseCursor (MOUSE_CURSOR_DEFAULT);
           DrawRectangleRounded (rec, 0.5, 0, ColorBrightness (DARKGRAY, .1f));
         }
-      float fontSize = 20;
+      float fontSize = DEFAULT_FONT_SIZE;
       float textWidth = MeasureText ("Apply", fontSize);
       DrawText ("Apply", rec.x + rec.width / 2 - textWidth / 2,
                 rec.y + rec.height / 2 - fontSize / 2, fontSize, BLACK);
@@ -620,19 +628,19 @@ drawLoadingScreen (int frameCount)
   if (0 <= x && x < 10)
     DrawText ("LOADING",
               GetScreenWidth () / 2 - MeasureText ("LOADING...", 40) / 2,
-              GetScreenHeight () / 2 - 20, 40, BLACK);
-  else if (10 <= x && x < 20)
+              GetScreenHeight () / 2 - DEFAULT_FONT_SIZE, 40, BLACK);
+  else if (10 <= x && x < DEFAULT_FONT_SIZE)
     DrawText ("LOADING.",
               GetScreenWidth () / 2 - MeasureText ("LOADING...", 40) / 2,
-              GetScreenHeight () / 2 - 20, 40, BLACK);
-  else if (20 <= x && x < 30)
+              GetScreenHeight () / 2 - DEFAULT_FONT_SIZE, 40, BLACK);
+  else if (DEFAULT_FONT_SIZE <= x && x < 30)
     DrawText ("LOADING..",
               GetScreenWidth () / 2 - MeasureText ("LOADING...", 40) / 2,
-              GetScreenHeight () / 2 - 20, 40, BLACK);
+              GetScreenHeight () / 2 - DEFAULT_FONT_SIZE, 40, BLACK);
   else
     DrawText ("LOADING...",
               GetScreenWidth () / 2 - MeasureText ("LOADING...", 40) / 2,
-              GetScreenHeight () / 2 - 20, 40, BLACK);
+              GetScreenHeight () / 2 - DEFAULT_FONT_SIZE, 40, BLACK);
   EndDrawing ();
 }
 
@@ -710,7 +718,7 @@ main (int argc, char **argv)
   SetWindowMinSize (800, 600);
   SetTargetFPS (40);
 
-  GuiSetStyle (DEFAULT, TEXT_SIZE, 20);
+  GuiSetStyle (DEFAULT, TEXT_SIZE, DEFAULT_FONT_SIZE);
   GuiSetStyle (DEFAULT, TEXT_SPACING, 2);
   GuiSetStyle (DEFAULT, TEXT_COLOR_NORMAL, 0x000000FF);
   GuiSetStyle (DEFAULT, TEXT_COLOR_FOCUSED, 0xBBBBBBFF);
