@@ -8,7 +8,7 @@ char *possibleMoves[] = { "R", "R'", "R2", "L", "L'", "L2", "U", "U'", "U2",
 char *possibleMoves2x2x2[]
     = { "R", "R'", "R2", "U", "U'", "U2", "F", "F'", "F2" };
 
-bool
+static bool
 areOppsitefaces (char c1, char c2)
 {
   return (c1 == 'R' && c2 == 'L') || (c1 == 'L' && c2 == 'R')
@@ -16,7 +16,7 @@ areOppsitefaces (char c1, char c2)
          || (c1 == 'F' && c2 == 'B') || (c1 == 'B' && c2 == 'F');
 }
 
-bool
+static bool
 moveIsValid (const char *fullMove, const char *lastMove,
              char *sequence[SCRAMBLE_SIZE], unsigned short int sequenceLength)
 {

@@ -9,7 +9,7 @@
 
 int SIZE = 3, MAXSIZE = 9, ROTATIONSPEED = 25;
 
-bool
+static bool
 isInnerCubie (float x, float y, float z)
 {
   return x != 0 && y != 0 && z != 0 && x != SIZE - 1 && y != SIZE - 1
@@ -55,7 +55,7 @@ Cube_free (Cube cube)
   free (cube.cube);
 }
 
-void
+static void
 handleAnimating (Cube *cube)
 {
   if (cube->isAnimating)
@@ -69,7 +69,7 @@ handleAnimating (Cube *cube)
     }
 }
 
-Vector3
+static Vector3
 getRotationVector (Rotation rotation, int posX, int posY, int posZ)
 {
   switch (rotation)
@@ -133,7 +133,7 @@ getRotationVector (Rotation rotation, int posX, int posY, int posZ)
     }
 }
 
-void
+static void
 handleAnimation (Cube *cube, int posX, int posY, int posZ)
 {
   Vector3 position = (Vector3){ posX - (float)SIZE / 2 + 0.5f,
@@ -210,7 +210,7 @@ getCorrespondingRotation (char c)
     }
 }
 
-char
+static char
 getRotation (const char *move, size_t len)
 {
   if (move[len - 1] == '\'')
@@ -238,25 +238,25 @@ Cube_applyMove (Cube *cube, char *move)
 
 /*----------------------------------------------------------------*/
 
-unsigned short int
+static unsigned short int
 calculateX (int dirX, int i)
 {
   return (dirX == -1) ? i : dirX;
 }
 
-unsigned short int
+static unsigned short int
 calculateY (int dirX, int dirY, int i, int j)
 {
   return (dirY == -1) ? (dirX == -1) ? j : i : dirY;
 }
 
-unsigned short int
+static unsigned short int
 calculateZ (int dirZ, int j)
 {
   return (dirZ == -1) ? j : dirZ;
 }
 
-void
+static void
 storeFaceAndRotateCubies (Cube *cube, Vector3 dir,
                           void (*cubieRotation) (Cubie *),
                           Cubie face[SIZE][SIZE])
@@ -273,7 +273,7 @@ storeFaceAndRotateCubies (Cube *cube, Vector3 dir,
       }
 }
 
-void
+static void
 transposeMatrix (Cubie face[SIZE][SIZE])
 {
   for (int i = 0; i < SIZE; i++)
@@ -285,7 +285,7 @@ transposeMatrix (Cubie face[SIZE][SIZE])
       }
 }
 
-void
+static void
 reverseRows (Cubie face[SIZE][SIZE])
 {
   for (int i = 0; i < SIZE; i++)
@@ -297,7 +297,7 @@ reverseRows (Cubie face[SIZE][SIZE])
       }
 }
 
-void
+static void
 reverseColumns (Cubie face[SIZE][SIZE])
 {
   for (int j = 0; j < SIZE; j++)
@@ -309,7 +309,7 @@ reverseColumns (Cubie face[SIZE][SIZE])
       }
 }
 
-void
+static void
 updateCubeFace (Cube *cube, Vector3 dir, Cubie face[SIZE][SIZE])
 {
   unsigned short int x, y, z;
@@ -323,7 +323,7 @@ updateCubeFace (Cube *cube, Vector3 dir, Cubie face[SIZE][SIZE])
       }
 }
 
-void
+static void
 rotate (Cube *cube, Vector3 dir, void (*cubieRotation) (Cubie *),
         bool antiClockwise)
 {

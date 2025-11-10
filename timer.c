@@ -16,7 +16,7 @@ Timer_make ()
                   .isDisabled = false };
 }
 
-void *
+static void *
 threadFunction (void *arg)
 {
   Timer *timer = (Timer *)arg;

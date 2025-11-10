@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-int
+static int
 compare (const void *a, const void *b)
 {
   char *time1 = *(char **)a;
@@ -13,7 +13,7 @@ compare (const void *a, const void *b)
   return strcmp (time1, time2);
 }
 
-bool
+static bool
 timeIsDNF (char time[20])
 {
   return time[0] == 'D';
