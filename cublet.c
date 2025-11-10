@@ -1,5 +1,6 @@
 #include "cublet.h"
 #include "include/raylib.h"
+#include "include/raymath.h"
 #include "include/rlgl.h"
 #include "utils.h"
 
@@ -79,207 +80,65 @@ void
 Cubie_drawCubie (Cubie *cubie, Vector3 position, Vector3 rotationAxis,
                  float rotationAngle)
 {
-  float x = 0.0f;
-  float y = 0.0f;
-  float z = 0.0f;
+  const float s = cubie->sideLength / 2.0f;
+
+  const Vector3 faceVertices[6][4]
+      = { // UP
+          { { -s, s, -s }, { -s, s, s }, { s, s, s }, { s, s, -s } },
+          // FRONT
+          { { -s, -s, s }, { s, -s, s }, { s, s, s }, { -s, s, s } },
+          // RIGHT
+          { { s, -s, -s }, { s, s, -s }, { s, s, s }, { s, -s, s } },
+          // BACK
+          { { -s, -s, -s }, { -s, s, -s }, { s, s, -s }, { s, -s, -s } },
+          // LEFT
+          { { -s, -s, -s }, { -s, -s, s }, { -s, s, s }, { -s, s, -s } },
+          // DOWN
+          { { -s, -s, -s }, { s, -s, -s }, { s, -s, s }, { -s, -s, s } }
+        };
 
   rlPushMatrix ();
   rlTranslatef (rotationAxis.x, rotationAxis.y, rotationAxis.z);
-
   rlRotatef (rotationAngle, rotationAxis.x, rotationAxis.y, rotationAxis.z);
-
   rlTranslatef (position.x - rotationAxis.x, position.y - rotationAxis.y,
                 position.z - rotationAxis.z);
 
+
+
+  // === Draw faces ===
   rlBegin (RL_TRIANGLES);
+  for (Face face = 0; face < 6; face++)
+    {
+      Color color = cubie->colors[face];
+      rlColor4ub (color.r, color.g, color.b, color.a);
 
-  // Front face
-  Color color = cubie->colors[FRONT];
-  rlColor4ub (color.r, color.g, color.b, color.a);
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom Left
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom Right
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top Left
+      const Vector3 *v = faceVertices[face];
+      rlVertex3f (v[0].x, v[0].y, v[0].z);
+      rlVertex3f (v[1].x, v[1].y, v[1].z);
+      rlVertex3f (v[3].x, v[3].y, v[3].z);
 
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top Right
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top Left
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom Right
-
-  // Back face
-  color = cubie->colors[BACK];
-  rlColor4ub (color.r, color.g, color.b, color.a);
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Bottom Left
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top Left
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Bottom Right
-
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top Right
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Bottom Right
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top Left
-
-  // Top face
-  color = cubie->colors[UP];
-  rlColor4ub (color.r, color.g, color.b, color.a);
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top Left
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom Left
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom Right
-
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top Right
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top Left
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom Right
-
-  // Bottom face
-  color = cubie->colors[DOWN];
-  rlColor4ub (color.r, color.g, color.b, color.a);
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top Left
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom Right
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom Left
-
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top Right
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom Right
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top Left
-
-  // Right face
-  color = cubie->colors[RIGHT];
-  rlColor4ub (color.r, color.g, color.b, color.a);
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Bottom Right
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top Right
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top Left
-
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom Left
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Bottom Right
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top Left
-
-  // Left face
-  color = cubie->colors[LEFT];
-  rlColor4ub (color.r, color.g, color.b, color.a);
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Bottom Right
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top Left
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top Right
-
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom Left
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top Left
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Bottom Right
-
+      rlVertex3f (v[1].x, v[1].y, v[1].z);
+      rlVertex3f (v[2].x, v[2].y, v[2].z);
+      rlVertex3f (v[3].x, v[3].y, v[3].z);
+    }
   rlEnd ();
 
+  // === Draw borders ===
   rlBegin (RL_LINES);
   rlColor4ub (BLACK.r, BLACK.g, BLACK.b, BLACK.a);
   rlSetLineWidth (3);
 
-  // Front face
-  //------------------------------------------------------------------
-  // Bottom line
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom left
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom right
-
-  // Left line
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom right
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top right
-
-  // Top line
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top right
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top left
-
-  // Right line
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top left
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Bottom left
-
-  // Back face
-  //------------------------------------------------------------------
-  // Bottom line
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Bottom left
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Bottom right
-
-  // Left line
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Bottom right
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top right
-
-  // Top line
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top right
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top left
-
-  // Right line
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top left
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Bottom left
-
-  // Top face
-  //------------------------------------------------------------------
-  // Left line
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top left front
-  rlVertex3f (x - cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top left back
-
-  // Right line
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top right front
-  rlVertex3f (x + cubie->sideLength / 2, y + cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top right back
-
-  // Bottom face
-  //------------------------------------------------------------------
-  // Left line
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top left front
-  rlVertex3f (x - cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top left back
-
-  // Right line
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z + cubie->sideLength / 2); // Top right front
-  rlVertex3f (x + cubie->sideLength / 2, y - cubie->sideLength / 2,
-              z - cubie->sideLength / 2); // Top right back
+  for (int face = 0; face < 6; face++)
+    {
+      const Vector3 *v = faceVertices[face];
+      for (int i = 0; i < 4; i++)
+        {
+          const Vector3 a = v[i];
+          const Vector3 b = v[(i + 1) % 4];
+          rlVertex3f (a.x, a.y, a.z);
+          rlVertex3f (b.x, b.y, b.z);
+        }
+    }
   rlEnd ();
 
   rlPopMatrix ();
