@@ -74,6 +74,8 @@ handleRotation (Rotation clockwise, Rotation antiClockwise)
 {
   if (isSolutionRunning)
     return;
+  currentSolution[0] = '\0';
+  currentSolutionSize = 0;
   if (IsKeyDown (KEY_LEFT_ALT))
     Queue_add (&queue, antiClockwise);
   else
