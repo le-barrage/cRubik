@@ -22,7 +22,7 @@
 #define RAYGUI_IMPLEMENTATION
 #include "include/raygui.h"
 
-#define CUBIE_SIZE 0.9
+#define CUBIE_SIZE 1.0
 #define BACKGROUND_COLOR GRAY
 
 float camera_mag;
@@ -509,9 +509,9 @@ drawCubeScreen ()
   DrawLine3D (Vector3Zero (), (Vector3){ (float)SIZE / 2 + 2, 0, 0 }, WHITE);
   DrawLine3D (Vector3Zero (), (Vector3){ 0, (float)SIZE / 2 + 2, 0 }, WHITE);
   DrawLine3D (Vector3Zero (), (Vector3){ 0, 0, (float)SIZE / 2 + 2 }, WHITE);
-  // DrawCube((Vector3){0}, SIZE - (1 - CUBIE_SIZE) - 0.05,
-  //          SIZE - (1 - CUBIE_SIZE) - 0.05, SIZE - (1 - CUBIE_SIZE) - 0.05,
-  //          BLACK);
+  // DrawCube ((Vector3){ 0 }, SIZE - (1 - CUBIE_SIZE) - 0.05,
+  //           SIZE - (1 - CUBIE_SIZE) - 0.05, SIZE - (1 - CUBIE_SIZE) - 0.05,
+  //           BLACK);
   Cube_drawCube (&cube);
   EndMode3D ();
 
@@ -636,10 +636,13 @@ drawLoadingScreen (int frameCount)
   EndDrawing ();
 }
 
+bool initK = true;
+
 void *
 initEverything ()
 {
-  init ();
+  if (initK)
+    init ();
 
   initCameraSettings ();
   queue = Queue_make ();
@@ -713,6 +716,9 @@ main (int argc, char **argv)
   GuiSetStyle (DEFAULT, TEXT_COLOR_FOCUSED, 0xBBBBBBFF);
   GuiSetStyle (DEFAULT, TEXT_COLOR_PRESSED, 0xFFFFFFFF);
 
+  if (argc >= 2 && strncmp (argv[1], "-nk", 3) == 0)
+    initK = false;
+
   pthread_t thread;
   pthread_create (&thread, NULL, initEverything, NULL);
 
@@ -725,9 +731,9 @@ main (int argc, char **argv)
 
   pthread_join (thread, NULL);
 
-  if (argc >= 2)
-    for (int i = 1; i < argc; i++)
-      Cube_applyMove (&cube, argv[i]);
+  // if (argc >= 2)
+  // for (int i = 1; i < argc; i++)
+  //   Cube_applyMove (&cube, argv[i]);
 
 #if defined(PLATFORM_WEB)
   emscripten_set_main_loop (UpdateDrawFrame, 0, 1);
