@@ -1,4 +1,4 @@
-# RubiksCube
+# cRubik
 
 ![](./rubiks.gif)
 
@@ -43,11 +43,11 @@ libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-d
 Run the following commands to compile and run the project:
 
 ```bash
-./build.sh && ./rubiks
+./build.sh && ./cRubik
 ```
 
 or
 
 ```bash
-make && ./rubiks
+make && ./cRubik
 ```
