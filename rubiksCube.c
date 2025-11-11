@@ -22,7 +22,7 @@
 #define RAYGUI_IMPLEMENTATION
 #include "include/raygui.h"
 
-#define CUBIE_SIZE 1.0
+#define CUBIE_SIZE 0.98
 #define BACKGROUND_COLOR GRAY
 
 #define DEFAULT_FONT_SIZE 20

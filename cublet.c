@@ -103,8 +103,6 @@ Cubie_drawCubie (Cubie *cubie, Vector3 position, Vector3 rotationAxis,
   rlTranslatef (position.x - rotationAxis.x, position.y - rotationAxis.y,
                 position.z - rotationAxis.z);
 
-
-
   // === Draw faces ===
   rlBegin (RL_TRIANGLES);
   for (Face face = 0; face < 6; face++)
