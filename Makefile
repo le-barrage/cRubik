@@ -20,7 +20,7 @@ SRCS := \
 	rubiksCube.c \
 	utils.c
 
-TARGET := rubiks
+TARGET := cRubik
 
 LDLIBS := -L ./include/ -lraylib -lm -pthread
 

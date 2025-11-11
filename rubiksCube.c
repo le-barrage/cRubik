@@ -4,6 +4,7 @@
 #include "kociemba/coordCube.h"
 #include "kociemba/enums.h"
 #include "kociemba/twoPhase.h"
+#include "patterns.h"
 #include "queue.h"
 #include "scramble.h"
 #include "timer.h"
@@ -11,6 +12,7 @@
 #include <ctype.h>
 #include <pthread.h>
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -672,6 +674,15 @@ initEverything ()
 void
 UpdateDrawFrame ()
 {
+  if (IsKeyPressed (KEY_P))
+    {
+      pattern p = CHECKERBOARD;
+
+      for (size_t i = 0; i < p.size; i++)
+        {
+          Queue_add (&queue, p.pattern[i]);
+        }
+    }
   if (IsKeyPressed (KEY_H) && !showOptions)
     showHelp = !showHelp;
   else if (IsKeyPressed (KEY_O) && !showHelp)
@@ -709,7 +720,7 @@ UpdateDrawFrame ()
 int
 main (int argc, char **argv)
 {
-  printf ("Rubik's Cube v1.0\n");
+  printf ("cRubik v0.1\n");
   SetTraceLogLevel (LOG_WARNING);
 
   SetConfigFlags (FLAG_MSAA_4X_HINT); // Anti-Aliasing
