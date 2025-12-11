@@ -148,8 +148,9 @@ findSolutionAndUpdateMoves (Cube *cube, int depthLimit, int timeOut)
 }
 
 void *
-findSolutionAndUpdateCurrentSolution ()
+findSolutionAndUpdateCurrentSolution (void *arg)
 {
+  (void)arg;
   if (SIZE != 3)
     {
       snprintf (currentSolution, 41,
@@ -526,6 +527,7 @@ drawPatternsScreen ()
               for (size_t j = 0; j < patterns[i].size; j++)
                 Queue_add (&queue, patterns[i].pattern[j]);
               showPatterns = false;
+              clearCurrentScrambleAndSolution ();
             }
         }
       else
@@ -722,8 +724,9 @@ drawLoadingScreen (int frameCount)
 bool initK = true;
 
 void *
-initEverything ()
+initEverything (void *arg)
 {
+  (void)arg;
   if (initK)
     init ();
 
@@ -800,7 +803,7 @@ main (int argc, char **argv)
   SetConfigFlags (FLAG_MSAA_4X_HINT); // Anti-Aliasing
 
   SetConfigFlags (FLAG_WINDOW_RESIZABLE);
-  InitWindow (1200, 800, "Rubik's Cube");
+  InitWindow (1200, 800, "cRubik");
   SetExitKey (-1);
   SetWindowMinSize (800, 600);
   SetTargetFPS (40);
@@ -825,10 +828,6 @@ main (int argc, char **argv)
     }
 
   pthread_join (thread, NULL);
-
-  // if (argc >= 2)
-  // for (int i = 1; i < argc; i++)
-  //   Cube_applyMove (&cube, argv[i]);
 
 #if defined(PLATFORM_WEB)
   emscripten_set_main_loop (UpdateDrawFrame, 0, 1);
