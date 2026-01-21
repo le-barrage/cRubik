@@ -12,3 +12,5 @@
 - save options to a file
 
 - generalize patterns to evey cube size 
+
+- add inspection time 
