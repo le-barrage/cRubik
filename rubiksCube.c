@@ -29,6 +29,8 @@
 
 #define DEFAULT_FONT_SIZE 20
 
+#define KEEP_SPACE_DOWN_MS 300
+
 short SOLUTION_DEPTH = 22;
 
 float camera_mag;
@@ -68,6 +70,8 @@ int helpTextsMaxLength;
 Timer timer;
 Color timerColor = BLACK;
 char timerString[10] = "00:00.000";
+bool isTimerReady = false;
+struct timespec keySpaceDownStart = { .tv_nsec = -1 }, now;
 
 bool show = false;
 int timeToShow = -1, posYToShow = 0;
@@ -288,8 +292,27 @@ applyCurrentSolution ()
 }
 
 void
+updateTimerString ()
+{
+  snprintf (timerString, 10, "%02d:%02d.%03d", timer.minutes, timer.seconds,
+            timer.milliseconds);
+}
+
+void
 handleKeyPress ()
 {
+  if (GetKeyPressed () && timer.isRunning)
+    {
+      Timer_stop (&timer);
+      updateTimerString ();
+      storeTime (timerString, SIZE);
+      getTimes (times, SIZE);
+      getAverageOf5 (times, avg);
+      generateNewScramble ();
+      timer.justStopped = false;
+      isTimerReady = false;
+      return;
+    }
   if (IsKeyPressed (KEY_U))
     handleRotation (U, u);
   else if (IsKeyPressed (KEY_D))
@@ -332,7 +355,24 @@ handleKeyPress ()
     }
   else if (IsKeyDown (KEY_SPACE) && !timer.isDisabled)
     {
-      if (!timer.isRunning && !timer.justStopped)
+      if (!isTimerReady)
+        {
+          if (keySpaceDownStart.tv_nsec == -1)
+            {
+              clock_gettime (CLOCK_MONOTONIC, &keySpaceDownStart);
+              printf ("%lu\n", keySpaceDownStart.tv_sec);
+            }
+          else
+            {
+              clock_gettime (CLOCK_MONOTONIC, &now);
+              long long elapsed_time_ns
+                  = (now.tv_sec - keySpaceDownStart.tv_sec) * 1000000000LL
+                    + (now.tv_nsec - keySpaceDownStart.tv_nsec);
+              double elapsed_time_ms = (double)elapsed_time_ns / 1000000.0;
+              isTimerReady = elapsed_time_ms > KEEP_SPACE_DOWN_MS;
+            }
+        }
+      else if (!timer.isRunning && !timer.justStopped)
         timerColor = (Color){ 0, 204, 51, 255 };
       else if (!timer.justStopped)
         {
@@ -341,18 +381,10 @@ handleKeyPress ()
     }
   else if (IsKeyReleased (KEY_SPACE) && !timer.isDisabled)
     {
-      if (timer.justStopped)
-        {
-          storeTime (timerString, SIZE);
-          getTimes (times, SIZE);
-          getAverageOf5 (times, avg);
-          generateNewScramble ();
-          timer.justStopped = false;
-          return;
-        }
       timerColor = BLACK;
-      if (!timer.isRunning)
+      if (!timer.isRunning && isTimerReady)
         Timer_start (&timer);
+      keySpaceDownStart.tv_nsec = -1;
     }
   else if (IsKeyPressed (KEY_KP_ADD) || IsKeyPressed (KEY_PAGE_UP))
     resizeCube (1);
@@ -567,13 +599,6 @@ DrawTextBoxed (const char *text, float fontSize, int y)
   if (strlen (text) > strlen (dup))
     DrawTextBoxed (text + strlen (dup) + 1, fontSize, y + 30);
   free (dup);
-}
-
-void
-updateTimerString ()
-{
-  snprintf (timerString, 10, "%02d:%02d.%03d", timer.minutes, timer.seconds,
-            timer.milliseconds);
 }
 
 void
