@@ -2,6 +2,9 @@
 
 ![](./rubiks.gif)
 
+> [!WARNING]
+> This software is unfinished. Keep your expectations low.
+
 Sources:
 
 - https://www.raylib.com/examples.html
