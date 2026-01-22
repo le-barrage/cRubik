@@ -14,3 +14,5 @@
 - generalize patterns to evey cube size 
 
 - add inspection time 
+
+- change keyboard input in settings
