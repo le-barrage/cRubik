@@ -47,14 +47,14 @@ Because we are using Raylib and RayGui, make sure the following libraries are in
 libx11-dev libxrandr-dev libxi-dev libgl1-mesa-dev libglu1-mesa-dev libxcursor-dev libxinerama-dev libwayland-dev libxkbcommon-dev
 ```
 
-Run the following commands to compile and run the project:
+Run the following command to compile and run the project:
 
 ```bash
-./build.sh && ./cRubik
+make && ./cRubik
 ```
 
 or
 
 ```bash
-make && ./cRubik
+make run
 ```
