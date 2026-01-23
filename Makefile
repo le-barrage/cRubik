@@ -1,6 +1,15 @@
 CC := gcc
 CFLAGS := -Wall -Wextra -Wno-unused-result -O2
-DEBUGFLAGS := -g -O0
+CFLAGS += -I./include -I./kociemba
+LDFLAGS := -L./include
+LDLIBS := -lraylib -lm -pthread
+
+# Debug flags (use: make DEBUG=1)
+ifdef DEBUG
+	CFLAGS := -Wall -Wextra -Wno-unused-result -g -O0 -I./include -I./kociemba
+endif
+
+TARGET := cRubik
 
 SRCS := \
 	include/raygui.c \
@@ -21,28 +30,41 @@ SRCS := \
 	rubiksCube.c \
 	utils.c
 
-TARGET := cRubik
+BUILDDIR := build
+OBJS := $(SRCS:%.c=$(BUILDDIR)/%.o)
 
-LDLIBS := -L ./include/ -lraylib -lm -pthread
+DEPS := $(OBJS:.o=.d)
 
-.PHONY: all clean run debug help
+.PHONY: all clean run rebuild help
 
 all: $(TARGET)
 
-$(TARGET): $(SRCS)
-	$(CC) $(CFLAGS) $(SRCS) -o $@ $(LDLIBS)
+$(TARGET): $(OBJS)
+	$(CC) $(OBJS) -o $@ $(LDFLAGS) $(LDLIBS)
 
-debug: CFLAGS := $(CFLAGS) $(DEBUGFLAGS)
-debug: clean $(TARGET)
+$(BUILDDIR)/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+-include $(DEPS)
 
 run: all
 	./$(TARGET)
 
+rebuild: clean all
+
 clean:
-	rm -f $(TARGET)
+	rm -rf $(BUILDDIR) $(TARGET)
 
 help:
-	@echo "TARGET = $(TARGET)"
-	@echo "CC = $(CC)"
-	@echo "CFLAGS = $(CFLAGS)"
-	@echo "LDLIBS = $(LDLIBS)"
+	@echo "Usage: make [target] [DEBUG=1]"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all      - Build $(TARGET) (default)"
+	@echo "  run      - Build and run $(TARGET)"
+	@echo "  clean    - Remove build files"
+	@echo "  rebuild  - Clean and rebuild"
+	@echo "  help     - Show this help"
+	@echo ""
+	@echo "Options:"
+	@echo "  DEBUG=1  - Build with debug symbols (-g -O0)"

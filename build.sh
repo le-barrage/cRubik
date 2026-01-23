@@ -1,1 +1,0 @@
-gcc -Wall -Wextra -o cRubik include/raygui.c include/cJson.c kociemba/twoPhase.c kociemba/move.c kociemba/faceCube.c kociemba/enums.c kociemba/cubieCube.c kociemba/coordCube.c average.c cublet.c cube.c patterns.c queue.c timer.c scramble.c rubiksCube.c utils.c -L ./include/ -lraylib -lm -pthread -O2 #-fsanitize=address -g 
