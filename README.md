@@ -26,6 +26,8 @@ Sources:
 
 - https://ruwix.com/the-rubiks-cube/rubiks-cube-patterns-algorithms/
 
+- https://github.com/DaveGamble/cJSON
+
 ## Current functionalities:
 
 - Cube visualization in 3D (in any NxNxN size):
