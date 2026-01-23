@@ -12,10 +12,109 @@
 #define NUM_TIMES 5
 #define NUM_VALID_TIMES 3
 
+typedef enum
+{
+  FIELD_DNF,
+  FIELD_PLUS_TWO
+} FieldType;
+
 static bool
 timeIsDNF (char time[20])
 {
   return time[0] == 'D' || time[1] == 'D';
+}
+
+static cJSON *
+readFsonFromFile (const char *filename)
+{
+  FILE *file = fopen (filename, "r");
+  if (!file)
+    {
+      perror ("Error opening file for reading");
+      return NULL;
+    }
+
+  fseek (file, 0, SEEK_END);
+  long length = ftell (file);
+  fseek (file, 0, SEEK_SET);
+
+  if (length == 0)
+    {
+      fprintf (stderr, "File is empty\n");
+      fclose (file);
+      return NULL;
+    }
+
+  char *buffer = malloc (length + 1);
+  if (!buffer)
+    {
+      fprintf (stderr, "Failed to alloc buffer\n");
+      fclose (file);
+      return NULL;
+    }
+
+  fread (buffer, 1, length, file);
+  buffer[length] = '\0';
+  fclose (file);
+
+  cJSON *json = cJSON_Parse (buffer);
+  free (buffer);
+
+  if (json == NULL)
+    {
+      const char *error_ptr = cJSON_GetErrorPtr ();
+      if (error_ptr != NULL)
+        {
+          fprintf (stderr, "Error parsing JSON: %s\n", error_ptr);
+        }
+      return NULL;
+    }
+
+  return json;
+}
+
+/* Helper function to write JSON to file */
+static int
+writeJsonToFile (const char *filename, cJSON *json)
+{
+  FILE *file = fopen (filename, "w");
+  if (file == NULL)
+    {
+      perror ("Error opening file for writing");
+      return 1;
+    }
+
+  char *output = cJSON_Print (json);
+  if (output)
+    {
+      fprintf (file, "%s", output);
+      free (output);
+    }
+
+  fclose (file);
+  return 0;
+}
+
+/* Helper function to calculate target index */
+static int
+getTargetIndex (int index, int total_solves)
+{
+  if (total_solves < NUM_TIMES)
+    {
+      return index;
+    }
+  else
+    {
+      return total_solves - NUM_TIMES + index;
+    }
+}
+
+/* Helper function to initialize times array */
+static void
+initializeTimesArray (char times[5][20])
+{
+  for (int i = 0; i < 5; i++)
+    strcpy (times[i], "-");
 }
 
 void
@@ -39,8 +138,7 @@ getLast5Solves (char times[5][20], int cubeSize)
   fseek (f, 0, SEEK_SET);
   if (length == 0)
     {
-      for (int i = 0; i < 5; i++)
-        strcpy (times[i], "-");
+      initializeTimesArray (times);
       fclose (f);
       return;
     }
@@ -66,8 +164,7 @@ getLast5Solves (char times[5][20], int cubeSize)
           fprintf (stderr, "Error before: %s\n", error_ptr);
         }
       free (buffer);
-      for (int i = 0; i < 5; i++)
-        strcpy (times[i], "-");
+      initializeTimesArray (times);
       return;
     }
 
@@ -78,8 +175,7 @@ getLast5Solves (char times[5][20], int cubeSize)
     {
       fprintf (stderr, "No 'solves' array found\n");
       cJSON_Delete (json);
-      for (int i = 0; i < 5; i++)
-        strcpy (times[i], "-");
+      initializeTimesArray (times);
       return;
     }
 
@@ -92,6 +188,7 @@ getLast5Solves (char times[5][20], int cubeSize)
   int worst_index = -1;
   double best_time = -1;
   double worst_time = -1;
+  bool foundDNF = false;
 
   for (int i = 0; i < 5; i++)
     {
@@ -118,6 +215,7 @@ getLast5Solves (char times[5][20], int cubeSize)
       if (cJSON_IsTrue (dnf))
         {
           strcpy (times[i], "DNF");
+          foundDNF = true;
           // DNF is always worst
           if (worst_time < 0)
             {
@@ -145,7 +243,7 @@ getLast5Solves (char times[5][20], int cubeSize)
               worst_time = t;
               worst_index = i;
             }
-          else if (t >= worst_time)
+          else if (!foundDNF && t >= worst_time)
             {
               worst_time = t;
               worst_index = i;
@@ -167,7 +265,7 @@ getLast5Solves (char times[5][20], int cubeSize)
               worst_time = t;
               worst_index = i;
             }
-          else if (t >= worst_time)
+          else if (!foundDNF && t >= worst_time)
             {
               worst_time = t;
               worst_index = i;
@@ -260,133 +358,6 @@ set_dnf (cJSON *solve, int value)
   return 0;
 }
 
-void
-setDNF (int index, int cubeSize)
-{
-  if (index < 0 || index >= NUM_TIMES)
-    {
-      fprintf (stderr, "Error: index %d out of range [0..%d]\n", index,
-               NUM_TIMES - 1);
-      return;
-    }
-
-  char filename[MAX_FILENAME_LEN];
-  getFileName (filename, cubeSize);
-
-  FILE *file = fopen (filename, "r");
-  if (!file)
-    {
-      perror ("Error opening file for reading");
-      return;
-    }
-
-  char *buffer = NULL;
-  long length;
-  cJSON *json = NULL;
-
-  fseek (file, 0, SEEK_END);
-  length = ftell (file);
-  fseek (file, 0, SEEK_SET);
-
-  if (length == 0)
-    {
-      fprintf (stderr, "File is empty\n");
-      fclose (file);
-      return;
-    }
-
-  buffer = malloc (length + 1);
-  if (!buffer)
-    {
-      fprintf (stderr, "Failed to alloc buffer\n");
-      fclose (file);
-      return;
-    }
-
-  fread (buffer, 1, length, file);
-  buffer[length] = '\0';
-  fclose (file);
-
-  json = cJSON_Parse (buffer);
-  free (buffer);
-
-  if (json == NULL)
-    {
-      const char *error_ptr = cJSON_GetErrorPtr ();
-      if (error_ptr != NULL)
-        {
-          fprintf (stderr, "Error parsing JSON: %s\n", error_ptr);
-        }
-      return;
-    }
-
-  cJSON *solves = cJSON_GetObjectItemCaseSensitive (json, "solves");
-  if (solves == NULL || !cJSON_IsArray (solves))
-    {
-      fprintf (stderr, "No 'solves' array found\n");
-      cJSON_Delete (json);
-      return;
-    }
-
-  int total_solves = cJSON_GetArraySize (solves);
-
-  // Calculate the actual index in the array
-  // If less than NUM_TIMES solves, use index directly
-  // Otherwise, use last NUM_TIMES solves
-  int target_index;
-  if (total_solves < NUM_TIMES)
-    {
-      target_index = index;
-    }
-  else
-    {
-      target_index = total_solves - NUM_TIMES + index;
-    }
-
-  if (target_index < 0 || target_index >= total_solves)
-    {
-      fprintf (stderr, "Target index %d out of range\n", target_index);
-      cJSON_Delete (json);
-      return;
-    }
-
-  cJSON *solve = cJSON_GetArrayItem (solves, target_index);
-  if (solve == NULL)
-    {
-      fprintf (stderr, "Could not get solve at index %d\n", target_index);
-      cJSON_Delete (json);
-      return;
-    }
-
-  const cJSON *dnf = cJSON_GetObjectItemCaseSensitive (solve, "dnf");
-
-  int status = set_dnf (solve, !cJSON_IsTrue (dnf));
-  if (status != 0)
-    {
-      fprintf (stderr, "Failed to set DNF\n");
-      cJSON_Delete (json);
-      return;
-    }
-
-  file = fopen (filename, "w");
-  if (file == NULL)
-    {
-      perror ("Error opening file for writing");
-      cJSON_Delete (json);
-      return;
-    }
-
-  char *output = cJSON_Print (json);
-  if (output)
-    {
-      fprintf (file, "%s", output);
-      free (output);
-    }
-
-  cJSON_Delete (json);
-  fclose (file);
-}
-
 static int
 set_plus_two (cJSON *solve, int value)
 {
@@ -439,8 +410,9 @@ set_plus_two (cJSON *solve, int value)
   return 0;
 }
 
-void
-setPlusTwo (int index, int cubeSize)
+/* Generic function to modify a field in a solve */
+static void
+modifySolveField (int index, int cubeSize, FieldType field_type)
 {
   if (index < 0 || index >= NUM_TIMES)
     {
@@ -452,50 +424,9 @@ setPlusTwo (int index, int cubeSize)
   char filename[MAX_FILENAME_LEN];
   getFileName (filename, cubeSize);
 
-  FILE *file = fopen (filename, "r");
-  if (!file)
-    {
-      perror ("Error opening file for reading");
-      return;
-    }
-
-  char *buffer = NULL;
-  long length;
-  cJSON *json = NULL;
-
-  fseek (file, 0, SEEK_END);
-  length = ftell (file);
-  fseek (file, 0, SEEK_SET);
-
-  if (length == 0)
-    {
-      fprintf (stderr, "File is empty\n");
-      fclose (file);
-      return;
-    }
-
-  buffer = malloc (length + 1);
-  if (!buffer)
-    {
-      fprintf (stderr, "Failed to alloc buffer\n");
-      fclose (file);
-      return;
-    }
-
-  fread (buffer, 1, length, file);
-  buffer[length] = '\0';
-  fclose (file);
-
-  json = cJSON_Parse (buffer);
-  free (buffer);
-
+  cJSON *json = readFsonFromFile (filename);
   if (json == NULL)
     {
-      const char *error_ptr = cJSON_GetErrorPtr ();
-      if (error_ptr != NULL)
-        {
-          fprintf (stderr, "Error parsing JSON: %s\n", error_ptr);
-        }
       return;
     }
 
@@ -508,16 +439,7 @@ setPlusTwo (int index, int cubeSize)
     }
 
   int total_solves = cJSON_GetArraySize (solves);
-
-  int target_index;
-  if (total_solves < NUM_TIMES)
-    {
-      target_index = index;
-    }
-  else
-    {
-      target_index = total_solves - NUM_TIMES + index;
-    }
+  int target_index = getTargetIndex (index, total_solves);
 
   if (target_index < 0 || target_index >= total_solves)
     {
@@ -534,31 +456,38 @@ setPlusTwo (int index, int cubeSize)
       return;
     }
 
-  const cJSON *plus_two = cJSON_GetObjectItemCaseSensitive (solve, "plus_two");
+  int status = 0;
+  if (field_type == FIELD_DNF)
+    {
+      const cJSON *dnf = cJSON_GetObjectItemCaseSensitive (solve, "dnf");
+      status = set_dnf (solve, !cJSON_IsTrue (dnf));
+    }
+  else if (field_type == FIELD_PLUS_TWO)
+    {
+      const cJSON *plus_two
+          = cJSON_GetObjectItemCaseSensitive (solve, "plus_two");
+      status = set_plus_two (solve, !cJSON_IsTrue (plus_two));
+    }
 
-  int status = set_plus_two (solve, !cJSON_IsTrue (plus_two));
   if (status != 0)
     {
-      fprintf (stderr, "Failed to set plus two\n");
+      fprintf (stderr, "Failed to set field\n");
       cJSON_Delete (json);
       return;
     }
 
-  file = fopen (filename, "w");
-  if (file == NULL)
-    {
-      perror ("Error opening file for writing");
-      cJSON_Delete (json);
-      return;
-    }
-
-  char *output = cJSON_Print (json);
-  if (output)
-    {
-      fprintf (file, "%s", output);
-      free (output);
-    }
-
+  writeJsonToFile (filename, json);
   cJSON_Delete (json);
-  fclose (file);
+}
+
+void
+setDNF (int index, int cubeSize)
+{
+  modifySolveField (index, cubeSize, FIELD_DNF);
+}
+
+void
+setPlusTwo (int index, int cubeSize)
+{
+  modifySolveField (index, cubeSize, FIELD_PLUS_TWO);
 }
