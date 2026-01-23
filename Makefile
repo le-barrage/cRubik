@@ -1,9 +1,10 @@
 CC := gcc
-CFLAGS := -Wall -Wextra -O2
+CFLAGS := -Wall -Wextra -Wno-unused-result -O2
 DEBUGFLAGS := -g -O0
 
 SRCS := \
 	include/raygui.c \
+	include/cJSON.c \
 	kociemba/twoPhase.c \
 	kociemba/move.c \
 	kociemba/faceCube.c \

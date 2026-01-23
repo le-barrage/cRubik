@@ -64,7 +64,7 @@ char *helpTexts[] = {
   "Press '-' or 'page down' to reduce the cube size and '+' or 'page up' to "
   "increase it.",
 };
-int helpTextsSize = sizeof (helpTexts) / sizeof (char *);
+int helpTextsSize = ARRAY_LEN (helpTexts);
 int helpTextsMaxLength;
 
 Timer timer;
@@ -251,7 +251,7 @@ resizeCube (int increment)
 
   initCameraSettings ();
 
-  getTimes (times, SIZE);
+  getLast5Solves (times, SIZE);
 }
 
 // TODO: Make this function more readable (change if)
@@ -305,8 +305,8 @@ handleKeyPress ()
     {
       Timer_stop (&timer);
       updateTimerString ();
-      storeTime (timerString, SIZE);
-      getTimes (times, SIZE);
+      storeTime (timerString, currentScramble, SIZE);
+      getLast5Solves (times, SIZE);
       getAverageOf5 (times, avg);
       generateNewScramble ();
       timer.justStopped = false;
@@ -676,14 +676,14 @@ drawCubeScreen ()
       else if (result == 2)
         {
           setPlusTwo (timeToShow, SIZE);
-          getTimes (times, SIZE);
+          getLast5Solves (times, SIZE);
           getAverageOf5 (times, avg);
           show = !show;
         }
       else if (result == 3)
         {
           setDNF (timeToShow, SIZE);
-          getTimes (times, SIZE);
+          getLast5Solves (times, SIZE);
           getAverageOf5 (times, avg);
           show = !show;
         }
@@ -759,7 +759,7 @@ initEverything (void *arg)
   queue = Queue_make ();
 
   timer = Timer_make ();
-  getTimes (times, SIZE);
+  getLast5Solves (times, SIZE);
 
   initCurrentScrambleAndSolution ();
 

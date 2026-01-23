@@ -10,11 +10,13 @@
 #define KEY_Z_FR 87
 #define KEY_W_FR 90
 
+#define ARRAY_LEN(array) (sizeof (array) / sizeof (array[0]))
+
 bool colorsEqual(Color color1, Color color2);
 
 int Cnk(int n, int k);
 
-void storeTime(char *time, int size);
+void storeTime (char *time, char *scramble, int size);
 
 int timeToSeconds(char time[10]);
 

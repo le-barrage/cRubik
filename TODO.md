@@ -1,4 +1,5 @@
 - Add scramble in times storage and be able to retrieve said scramble to do it again.
+
 - cleanup the average.c file (maybe store everything in Json ?)
 
 - add a section with buttons each putting a pattern on the cube (ex: sueperflip)
@@ -16,3 +17,7 @@
 - add inspection time 
 
 - change keyboard input in settings
+
+- change font
+
+-highlight current move when applying Kociemba
