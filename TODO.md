@@ -1,6 +1,6 @@
-- Add scramble in times storage and be able to retrieve said scramble to do it again.
+- Be able to retrieve scramble from time storage to do it again.
 
-- cleanup the average.c file (maybe store everything in Json ?)
+- cleanup the average.c file
 
 - add a section with buttons each putting a pattern on the cube (ex: sueperflip)
 
@@ -20,4 +20,4 @@
 
 - change font
 
--highlight current move when applying Kociemba
+- highlight current move when applying Kociemba and patterns
