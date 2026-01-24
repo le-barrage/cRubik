@@ -85,7 +85,7 @@ handleRotation (Rotation clockwise, Rotation antiClockwise)
     return;
   currentSolution[0] = '\0';
   currentSolutionSize = 0;
-  if (IsKeyDown (KEY_LEFT_ALT))
+  if (IsKeyDown (keyBindings.key_ALT))
     Queue_add (&queue, antiClockwise);
   else
     Queue_add (&queue, clockwise);
@@ -313,29 +313,29 @@ handleKeyPress ()
       isTimerReady = false;
       return;
     }
-  if (IsKeyPressed (KEY_U))
+  if (IsKeyPressed (keyBindings.key_U))
     handleRotation (U, u);
-  else if (IsKeyPressed (KEY_D))
+  else if (IsKeyPressed (keyBindings.key_D))
     handleRotation (D, d);
-  else if (IsKeyPressed (KEY_L))
+  else if (IsKeyPressed (keyBindings.key_L))
     handleRotation (L, l);
-  else if (IsKeyPressed (KEY_R))
+  else if (IsKeyPressed (keyBindings.key_R))
     handleRotation (R, r);
-  else if (IsKeyPressed (KEY_F))
+  else if (IsKeyPressed (keyBindings.key_F))
     handleRotation (F, f);
-  else if (IsKeyPressed (KEY_B))
+  else if (IsKeyPressed (keyBindings.key_B))
     handleRotation (B, b);
-  else if (IsKeyPressed (KEY_M_FR))
+  else if (IsKeyPressed (keyBindings.key_M))
     handleRotation (M, m);
-  else if (IsKeyPressed (KEY_E))
+  else if (IsKeyPressed (keyBindings.key_E))
     handleRotation (E, e);
-  else if (IsKeyPressed (KEY_S))
+  else if (IsKeyPressed (keyBindings.key_S))
     handleRotation (S, s);
-  else if (IsKeyPressed (KEY_X))
+  else if (IsKeyPressed (keyBindings.key_X))
     handleRotation (X, x);
-  else if (IsKeyPressed (KEY_Y))
+  else if (IsKeyPressed (keyBindings.key_Y))
     handleRotation (Y, y);
-  else if (IsKeyPressed (KEY_Z_FR))
+  else if (IsKeyPressed (keyBindings.key_Z))
     handleRotation (Z, z);
   else if (IsKeyPressed (KEY_ENTER))
     generateNewScramble ();
@@ -479,13 +479,13 @@ drawHelpScreen ()
 }
 
 void
-rotationSpeedSlider ()
+rotationSpeedSlider (int startY)
 {
   float r = (float)ROTATIONSPEED;
   int sliderWidth = 150, sliderHeight = 30;
   Rectangle sliderRectangle
       = (Rectangle){ .x = (float)(GetScreenWidth () - sliderWidth) / 2,
-                     .y = (float)(GetScreenHeight () - sliderHeight) / 2,
+                     .y = (float)startY,
                      .width = sliderWidth,
                      .height = sliderHeight };
 
@@ -508,6 +508,159 @@ rotationSpeedSlider ()
             BLACK);
 }
 
+static int editingKeyIndex = -1;
+
+typedef struct
+{
+  const char *name;
+  int *keyPtr;
+} KeyBindingEntry;
+
+static KeyBindingEntry keyBindingEntries[13];
+
+void
+initKeyBindingEntries ()
+{
+  keyBindingEntries[0] = (KeyBindingEntry){ "R", &keyBindings.key_R };
+  keyBindingEntries[1] = (KeyBindingEntry){ "L", &keyBindings.key_L };
+  keyBindingEntries[2] = (KeyBindingEntry){ "U", &keyBindings.key_U };
+  keyBindingEntries[3] = (KeyBindingEntry){ "D", &keyBindings.key_D };
+  keyBindingEntries[4] = (KeyBindingEntry){ "F", &keyBindings.key_F };
+  keyBindingEntries[5] = (KeyBindingEntry){ "B", &keyBindings.key_B };
+  keyBindingEntries[6] = (KeyBindingEntry){ "M", &keyBindings.key_M };
+  keyBindingEntries[7] = (KeyBindingEntry){ "S", &keyBindings.key_S };
+  keyBindingEntries[8] = (KeyBindingEntry){ "E", &keyBindings.key_E };
+  keyBindingEntries[9] = (KeyBindingEntry){ "X", &keyBindings.key_X };
+  keyBindingEntries[10] = (KeyBindingEntry){ "Y", &keyBindings.key_Y };
+  keyBindingEntries[11] = (KeyBindingEntry){ "Z", &keyBindings.key_Z };
+  keyBindingEntries[12] = (KeyBindingEntry){ "CCW", &keyBindings.key_ALT };
+}
+
+void
+drawKeyBindingsUI (int startY)
+{
+  static bool initialized = false;
+  if (!initialized)
+    {
+      initKeyBindingEntries ();
+      initialized = true;
+    }
+
+  int buttonWidth = 120;
+  int buttonHeight = 35;
+  int labelWidth = 50;
+  int spacing = 15;
+  int columns = 3;
+  int totalWidth = columns * (labelWidth + buttonWidth + spacing * 2);
+  int startX = (GetScreenWidth () - totalWidth) / 2;
+
+  const char *title = "Key Bindings (click to change):";
+  int titleWidth = MeasureText (title, DEFAULT_FONT_SIZE);
+  DrawText (title, (GetScreenWidth () - titleWidth) / 2, startY,
+            DEFAULT_FONT_SIZE, BLACK);
+
+  startY += 40;
+
+  bool isHoveringButton = false;
+
+  for (int i = 0; i < 13; i++)
+    {
+      int row = i / columns;
+      int col = i % columns;
+      int x = startX + col * (labelWidth + buttonWidth + spacing * 3);
+      int y = startY + row * (buttonHeight + spacing);
+
+      DrawText (TextFormat ("%s:", keyBindingEntries[i].name), x,
+                y + (buttonHeight - DEFAULT_FONT_SIZE) / 2, DEFAULT_FONT_SIZE,
+                BLACK);
+
+      Rectangle button = (Rectangle){ .x = x + labelWidth,
+                                      .y = y,
+                                      .width = buttonWidth,
+                                      .height = buttonHeight };
+
+      bool isHovering = CheckCollisionPointRec (GetMousePosition (), button);
+      bool isEditing = (editingKeyIndex == i);
+      isHoveringButton |= isHovering;
+
+      Color buttonColor;
+      if (isEditing)
+        buttonColor = GREEN;
+      else if (isHovering)
+        buttonColor = ColorBrightness (DARKGRAY, -0.1f);
+      else
+        buttonColor = ColorBrightness (DARKGRAY, 0.1f);
+
+      DrawRectangleRounded (button, 0.2f, 0, buttonColor);
+
+      const char *keyText;
+      if (isEditing)
+        keyText = "Press key...";
+      else
+        keyText = getKeyName (*keyBindingEntries[i].keyPtr);
+
+      int textW = MeasureText (keyText, DEFAULT_FONT_SIZE);
+      DrawText (keyText, button.x + (button.width - textW) / 2,
+                button.y + (button.height - DEFAULT_FONT_SIZE) / 2,
+                DEFAULT_FONT_SIZE, isEditing ? WHITE : BLACK);
+
+      if (isHovering && IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
+        {
+          editingKeyIndex = i;
+        }
+    }
+
+  if (editingKeyIndex >= 0)
+    {
+      int key = GetKeyPressed ();
+      if (key)
+        printf ("%d\n", key);
+      if (key > 0 && key != KEY_O && key != KEY_ESCAPE && key != KEY_SPACE
+          && key != KEY_ENTER) // Don't allow 'O' as it exits options
+        {
+          *keyBindingEntries[editingKeyIndex].keyPtr = key;
+          editingKeyIndex = -1;
+        }
+      if (IsKeyPressed (KEY_ESCAPE))
+        {
+          editingKeyIndex = -1;
+        }
+    }
+
+  const char *resetText = "Reset to Defaults";
+  int resetTextW = MeasureText (resetText, DEFAULT_FONT_SIZE);
+
+  int resetButtonWidth = resetTextW + 20;
+  int resetButtonHeight = 35;
+  int resetY = startY + (13 / columns + 1) * (buttonHeight + spacing) + 20;
+  Rectangle resetButton
+      = (Rectangle){ .x = (GetScreenWidth () - resetButtonWidth) / 2,
+                     .y = resetY,
+                     .width = resetButtonWidth,
+                     .height = resetButtonHeight };
+
+  bool isHoveringReset
+      = CheckCollisionPointRec (GetMousePosition (), resetButton);
+  DrawRectangleRounded (resetButton, 0.2f, 0,
+                        isHoveringReset ? ColorBrightness (MAROON, -0.1f)
+                                        : ColorBrightness (MAROON, 0.1f));
+  DrawText (resetText, resetButton.x + (resetButton.width - resetTextW) / 2,
+            resetButton.y + (resetButton.height - DEFAULT_FONT_SIZE) / 2,
+            DEFAULT_FONT_SIZE, WHITE);
+
+  isHoveringButton |= isHoveringReset;
+  if (isHoveringButton)
+    SetMouseCursor (MOUSE_CURSOR_POINTING_HAND);
+  else
+    SetMouseCursor (MOUSE_CURSOR_DEFAULT);
+
+  if (isHoveringReset && IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
+    {
+      initDefaultKeyBindings ();
+      editingKeyIndex = -1;
+    }
+}
+
 // TODO: save options to a file
 void
 drawOptionsScreen ()
@@ -516,7 +669,9 @@ drawOptionsScreen ()
   int textWidth = MeasureText ("Press 'o' to exit.", DEFAULT_FONT_SIZE);
   DrawText ("Press 'o' to exit.", GetScreenWidth () - textWidth - 10, 10,
             DEFAULT_FONT_SIZE, DARKGRAY);
-  rotationSpeedSlider ();
+
+  drawKeyBindingsUI (60);
+  rotationSpeedSlider (450);
 }
 
 void
@@ -596,9 +751,10 @@ DrawTextBoxed (const char *text, float fontSize, int y)
     }
   DrawText (dup, GetScreenWidth () / 2 - MeasureText (dup, fontSize) / 2, y,
             fontSize, BLACK);
-  if (strlen (text) > strlen (dup))
-    DrawTextBoxed (text + strlen (dup) + 1, fontSize, y + 30);
+  size_t len = strlen (dup);
   free (dup);
+  if (strlen (text) > len)
+    DrawTextBoxed (text + len + 1, fontSize, y + 30);
 }
 
 void
@@ -755,6 +911,7 @@ initEverything (void *arg)
   if (initK)
     init ();
 
+  initDefaultKeyBindings ();
   initCameraSettings ();
   queue = Queue_make ();
 

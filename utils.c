@@ -1,5 +1,6 @@
 #include "utils.h"
 #include "include/cJSON.h"
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -223,4 +224,106 @@ void
 getFileName (char filename[20], int cubeSize)
 {
   snprintf (filename, 20, "times/%d.time", cubeSize);
+}
+
+KeyBindings keyBindings;
+
+void
+initDefaultKeyBindings (void)
+{
+  keyBindings.key_R = KEY_R;
+  keyBindings.key_L = KEY_L;
+  keyBindings.key_U = KEY_U;
+  keyBindings.key_D = KEY_D;
+  keyBindings.key_F = KEY_F;
+  keyBindings.key_B = KEY_B;
+  keyBindings.key_M = KEY_M_FR;
+  keyBindings.key_S = KEY_S;
+  keyBindings.key_E = KEY_E;
+  keyBindings.key_X = KEY_X;
+  keyBindings.key_Y = KEY_Y;
+  keyBindings.key_Z = KEY_Z_FR;
+  keyBindings.key_ALT = KEY_LEFT_ALT;
+}
+
+const char *
+getKeyName (int key)
+{
+  switch (key)
+    {
+    // case KEY_A:
+    //   return "A";
+    // case KEY_B:
+    //   return "B";
+    // case KEY_C:
+    //   return "C";
+    // case KEY_D:
+    //   return "D";
+    // case KEY_E:
+    //   return "E";
+    // case KEY_F:
+    //   return "F";
+    // case KEY_G:
+    //   return "G";
+    // case KEY_H:
+    //   return "H";
+    // case KEY_I:
+    //   return "I";
+    // case KEY_J:
+    //   return "J";
+    // case KEY_K:
+    //   return "K";
+    // case KEY_L:
+    //   return "L";
+    // case KEY_M:
+    //   return "M";
+    // case KEY_N:
+    //   return "N";
+    // case KEY_O:
+    //   return "O";
+    // case KEY_P:
+    //   return "P";
+    // case KEY_Q:
+    //   return "Q";
+    // case KEY_R:
+    //   return "R";
+    // case KEY_S:
+    //   return "S";
+    // case KEY_T:
+    //   return "T";
+    // case KEY_U:
+    //   return "U";
+    // case KEY_V:
+    //   return "V";
+    // case KEY_W:
+    //   return "W";
+    // case KEY_X:
+    //   return "X";
+    // case KEY_Y:
+    //   return "Y";
+    // case KEY_Z:
+    //   return "Z";
+    case KEY_LEFT_ALT:
+      return "L-ALT";
+    case KEY_RIGHT_ALT:
+      return "R-ALT";
+    case KEY_LEFT_SHIFT:
+      return "L-SHIFT";
+    case KEY_RIGHT_SHIFT:
+      return "R-SHIFT";
+    case KEY_LEFT_CONTROL:
+      return "L-CTRL";
+    case KEY_RIGHT_CONTROL:
+      return "R-CTRL";
+    case KEY_SPACE:
+      return "SPACE";
+    default:
+      {
+        static char str[10];
+        // str[0] = (char)key;
+        // str[1] = '\0';
+        sprintf (str, "%d", key);
+        return str;
+      }
+    }
 }

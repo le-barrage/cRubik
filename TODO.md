@@ -16,7 +16,7 @@
 
 - add inspection time 
 
-- change keyboard input in settings
+- print corresponding key in options
 
 - change font
 

@@ -12,6 +12,27 @@
 
 #define ARRAY_LEN(array) (sizeof (array) / sizeof (array[0]))
 
+typedef struct {
+  int key_R;
+  int key_L;
+  int key_U;
+  int key_D;
+  int key_F;
+  int key_B;
+  int key_M;
+  int key_S;
+  int key_E;
+  int key_X;
+  int key_Y;
+  int key_Z;
+  int key_ALT;
+} KeyBindings;
+
+extern KeyBindings keyBindings;
+
+const char *getKeyName(int key);
+void initDefaultKeyBindings(void);
+
 bool colorsEqual(Color color1, Color color2);
 
 int Cnk(int n, int k);
