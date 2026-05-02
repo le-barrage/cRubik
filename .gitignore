@@ -3,3 +3,5 @@ cRubik
 times/*
 !times/.gitkeep
 build/*
+options.json
+options.json.tmp
