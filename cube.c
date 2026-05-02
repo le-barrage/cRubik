@@ -759,3 +759,22 @@ Cube_faceLetter (Face f)
     }
   return '?';
 }
+
+/* Rotation enum is laid out as 12 (uppercase, lowercase) pairs:
+ * U/u, D/d, R/r, L/l, F/f, B/b, M/m, E/e, S/s, X/x, Y/y, Z/z. The
+ * lowercase form is the inverse, rendered as a primed token. 
+*/
+void
+Cube_rotationToken (Rotation r, char out[3])
+{
+  static const char letters[12]
+      = { 'U', 'D', 'R', 'L', 'F', 'B', 'M', 'E', 'S', 'X', 'Y', 'Z' };
+  out[0] = letters[r / 2];
+  if (r % 2 == 1)
+    {
+      out[1] = '\'';
+      out[2] = '\0';
+    }
+  else
+    out[1] = '\0';
+}

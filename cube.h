@@ -68,4 +68,6 @@ void Cube_appendNormalizationTokens(char *buf, const CubeOrientation *o);
 
 char Cube_faceLetter(Face f);
 
+void Cube_rotationToken(Rotation r, char out[3]);
+
 #endif // !CUBE_H

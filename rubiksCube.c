@@ -47,6 +47,52 @@ Queue queue;
 bool isSolutionRunning = false, isThreadLaunched = false;
 pthread_t solutionThread;
 
+typedef struct
+{
+  bool active;
+  char text[256];
+  int currentMoveIndex;
+  int popsPerToken[64];
+  int tokenCount;
+  int popsRemaining;
+} Playback;
+
+Playback playback = { .active = false, .currentMoveIndex = -1 };
+
+static int
+countPopsAndTokens (const char *text, int popsPerToken[64])
+{
+  int tokenCount = 0;
+  int i = 0;
+  while (text[i] != '\0' && tokenCount < 64)
+    {
+      if (text[i] == ' ')
+        {
+          i++;
+          continue;
+        }
+      int j = i;
+      while (text[j] != '\0' && text[j] != ' ')
+        j++;
+      int pops = (j - i >= 2 && text[j - 1] == '2') ? 2 : 1;
+      popsPerToken[tokenCount++] = pops;
+      i = j;
+    }
+  return tokenCount;
+}
+
+static void
+initPlaybackFromText (const char *text)
+{
+  strncpy (playback.text, text, sizeof (playback.text) - 1);
+  playback.text[sizeof (playback.text) - 1] = '\0';
+  playback.tokenCount
+      = countPopsAndTokens (playback.text, playback.popsPerToken);
+  playback.currentMoveIndex = -1;
+  playback.popsRemaining = 0;
+  playback.active = true;
+}
+
 bool showHelp = false, showExitMessageBox = false, showOptions = false,
      isEverythingLoaded = false, showPatterns = false;
 
@@ -259,6 +305,9 @@ applyCurrentSolution ()
   Timer_disable (&timer);
   isSolutionRunning = true;
   currentSolutionSize = 0;
+
+  initPlaybackFromText (currentSolution);
+
   int i = 0;
   char rotation;
   while (currentSolution[i] != '\0')
@@ -404,10 +453,27 @@ handleQueue ()
           isSolutionRunning = false;
           timer.isDisabled = false;
         }
+      if (playback.active)
+        {
+          playback.active = false;
+          playback.currentMoveIndex = -1;
+          playback.popsRemaining = 0;
+        }
       return;
     }
   cube.isAnimating = true;
   cube.currentRotation = Queue_pop (&queue);
+  if (playback.active)
+    {
+      if (playback.popsRemaining <= 0)
+        {
+          playback.currentMoveIndex++;
+          if (playback.currentMoveIndex < playback.tokenCount)
+            playback.popsRemaining
+                = playback.popsPerToken[playback.currentMoveIndex];
+        }
+      playback.popsRemaining--;
+    }
 }
 
 void
@@ -513,10 +579,27 @@ drawPatternsScreen ()
                                 ColorBrightness (DARKGRAY, -.1f));
           if (IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
             {
+              char patternText[256];
+              size_t pos = 0;
+              patternText[0] = '\0';
               for (size_t j = 0; j < patterns[i].size; j++)
-                Queue_add (&queue, patterns[i].pattern[j]);
+                {
+                  Queue_add (&queue, patterns[i].pattern[j]);
+                  char tok[3];
+                  Cube_rotationToken (patterns[i].pattern[j], tok);
+                  size_t tokLen = strlen (tok);
+                  size_t needed = (j > 0 ? 1 : 0) + tokLen;
+                  if (pos + needed + 1 >= sizeof (patternText))
+                    continue;
+                  if (j > 0)
+                    patternText[pos++] = ' ';
+                  memcpy (patternText + pos, tok, tokLen);
+                  pos += tokLen;
+                }
+              patternText[pos] = '\0';
               showPatterns = false;
               clearCurrentScrambleAndSolution ();
+              initPlaybackFromText (patternText);
             }
         }
       else
@@ -533,30 +616,114 @@ drawPatternsScreen ()
     SetMouseCursor (MOUSE_CURSOR_DEFAULT);
 }
 
+static int
+drawTextCursorAfter (const char *s, int fontSize)
+{
+  int spacing = fontSize / 10;
+  if (spacing < 1)
+    spacing = 1;
+  return MeasureText(s, fontSize) + spacing;
+}
 void
-DrawTextBoxed (const char *text, float fontSize, int y)
+DrawMoves (const char *text, float fontSize, int y, int highlightToken)
 {
   if (strlen (text) == 0)
     return;
 
-  int lastSpace = 0;
-  char *dup = strdup (text);
-  char *lastSpacePtr = strrchr (dup, ' ');
-  lastSpace = (lastSpacePtr != NULL) ? lastSpacePtr - dup : -1;
-  while (MeasureText (dup, fontSize) > GetScreenWidth () - DEFAULT_FONT_SIZE)
+  char workCopy[256];
+  strncpy (workCopy, text, sizeof (workCopy) - 1);
+  workCopy[sizeof (workCopy) - 1] = '\0';
+
+  char *tokens[64];
+  int tokenCount = 0;
+  for (char *t = strtok (workCopy, " "); t && tokenCount < 64;
+       t = strtok (NULL, " "))
+    tokens[tokenCount++] = t;
+  if (tokenCount == 0)
+    return;
+
+  int maxWidth = GetScreenWidth () - DEFAULT_FONT_SIZE;
+  int lineHeight = 30;
+
+  int lineStart[16] = { 0 };
+  int lineCount = 1;
+
+  char lineBuf[256];
+  int lineLen = 0;
+  int len0 = strlen (tokens[0]);
+  memcpy (lineBuf, tokens[0], len0);
+  lineLen = len0;
+  lineBuf[lineLen] = '\0';
+
+  for (int i = 1; i < tokenCount; i++)
     {
-      if (lastSpace == -1)
+      int tlen = strlen (tokens[i]);
+      if (lineLen + 1 + tlen + 1 > (int)sizeof (lineBuf))
         break;
-      dup[lastSpace] = '\0';
-      lastSpacePtr = strrchr (dup, ' ');
-      lastSpace = (lastSpacePtr != NULL) ? lastSpacePtr - dup : -1;
+      lineBuf[lineLen] = ' ';
+      memcpy (lineBuf + lineLen + 1, tokens[i], tlen);
+      lineBuf[lineLen + 1 + tlen] = '\0';
+
+      if (MeasureText (lineBuf, fontSize) > maxWidth && lineCount < 16)
+        {
+          lineBuf[lineLen] = '\0';
+          lineStart[lineCount++] = i;
+          memcpy (lineBuf, tokens[i], tlen);
+          lineLen = tlen;
+          lineBuf[lineLen] = '\0';
+        }
+      else
+        lineLen += 1 + tlen;
     }
-  DrawText (dup, GetScreenWidth () / 2 - MeasureText (dup, fontSize) / 2, y,
-            fontSize, BLACK);
-  size_t len = strlen (dup);
-  free (dup);
-  if (strlen (text) > len)
-    DrawTextBoxed (text + len + 1, fontSize, y + 30);
+  lineStart[lineCount] = tokenCount;
+
+  for (int line = 0; line < lineCount; line++)
+    {
+      int startIdx = lineStart[line];
+      int endIdx = lineStart[line + 1];
+
+      char buf[256];
+      int len = 0;
+      for (int i = startIdx; i < endIdx; i++)
+        {
+          if (i > startIdx && len + 1 < (int)sizeof (buf))
+            buf[len++] = ' ';
+          int tlen = strlen (tokens[i]);
+          if (len + tlen >= (int)sizeof (buf))
+            break;
+          memcpy (buf + len, tokens[i], tlen);
+          len += tlen;
+        }
+      buf[len] = '\0';
+
+      int lineWidth = MeasureText (buf, fontSize);
+      int lineX = (GetScreenWidth () - lineWidth) / 2;
+      int yLine = y + line * lineHeight;
+
+      DrawText (buf, lineX, yLine, fontSize, BLACK);
+
+      if (highlightToken < startIdx || highlightToken >= endIdx)
+        continue;
+
+      int hOffset = 0;
+      for (int i = startIdx; i < highlightToken; i++)
+        hOffset += strlen (tokens[i]) + 1;
+      int hLen = strlen (tokens[highlightToken]);
+
+      int overlayX = lineX;
+      if (hOffset > 0)
+        {
+          char saved = buf[hOffset];
+          buf[hOffset] = '\0';
+          overlayX += drawTextCursorAfter (buf, fontSize);
+          buf[hOffset] = saved;
+        }
+
+      char saved = buf[hOffset + hLen];
+      buf[hOffset + hLen] = '\0';
+      DrawText (buf + hOffset, overlayX, yLine, fontSize, GOLD);
+      buf[hOffset + hLen] = saved;
+    }
 }
 
 void
@@ -585,7 +752,7 @@ drawCubeScreen ()
   DrawText ("Current scramble:",
             GetScreenWidth () / 2 - MeasureText ("Current scramble:", 30) / 2,
             10, 30, BLACK);
-  DrawTextBoxed (currentScramble, DEFAULT_FONT_SIZE, 50);
+  DrawMoves (currentScramble, DEFAULT_FONT_SIZE, 50, -1);
 
   Timer_update (&timer);
   updateTimerString ();
@@ -598,7 +765,12 @@ drawCubeScreen ()
               GetScreenWidth () / 2
                   - MeasureText (solutionFoundText, DEFAULT_FONT_SIZE) / 2,
               GetScreenHeight () - 130, DEFAULT_FONT_SIZE, BLACK);
-  DrawTextBoxed (currentSolution, DEFAULT_FONT_SIZE, GetScreenHeight () - 100);
+  if (playback.active)
+    DrawMoves (playback.text, DEFAULT_FONT_SIZE, GetScreenHeight () - 100,
+               playback.currentMoveIndex);
+  else
+    DrawMoves (currentSolution, DEFAULT_FONT_SIZE, GetScreenHeight () - 100,
+               -1);
 
   DrawText ("Ao5:", 10, GetScreenHeight () / 2 - 100, DEFAULT_FONT_SIZE,
             BLACK);
@@ -745,7 +917,7 @@ UpdateDrawFrame ()
     showHelp = !showHelp;
   else if (IsKeyPressed (KEY_O) && !showHelp && !showPatterns)
     {
-    showOptions = !showOptions;
+      showOptions = !showOptions;
       if (!showOptions)
         Options_save ();
     }
