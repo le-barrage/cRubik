@@ -2,11 +2,7 @@
 
 - cleanup the average.c file
 
-- add a section with buttons each putting a pattern on the cube (ex: sueperflip)
-
 - hotreload
-
-- when cube is rotated, kociemba bugs
 
 - generalize kociemba to 2x2 and 3x3+
 
