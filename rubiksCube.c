@@ -1,6 +1,7 @@
 #include "average.h"
 #include "cube.h"
 #include "include/raylib.h"
+#include "include/raymath.h"
 #include "kociemba/coordCube.h"
 #include "kociemba/enums.h"
 #include "kociemba/twoPhase.h"

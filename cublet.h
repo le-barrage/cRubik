@@ -2,33 +2,46 @@
 #define CUBLET_H
 
 #include "include/raylib.h"
-#include "include/raymath.h"
 
-typedef enum faces { UP, FRONT, RIGHT, BACK, LEFT, DOWN } Face;
+#define FACE_COUNT 6
 
-typedef struct Cubie {
-  Vector3 position;
-  Color colors[6];
-  float sideLength;
-} Cubie;
+typedef enum
+{
+  UP,
+  FRONT,
+  RIGHT,
+  BACK,
+  LEFT,
+  DOWN
+} Face;
 
-Cubie Cubie_make(int x, int y, int z, float sideLength, int size);
+/* A single small cube ("cubie") inside the larger Rubik's cube. Tracks the
+ * color shown on each of its 6 faces: an inner cubie has BLACK on every
+ * face, a corner has 3 non-black faces, an edge 2, a center 1. */
+typedef struct
+{
+  Color colors[FACE_COUNT];
+  float side_length;
+} cubie_t;
 
-void Cubie_rotateRight(Cubie *cubie);
+/* Construct a cubie at grid position (x, y, z) within an N=size cube. Each
+ * coordinate must satisfy 0 <= coord < size. The cubie's outer-facing colors
+ * are derived from its position; inner faces get BLACK. */
+cubie_t cubie_make (int x, int y, int z, float side_length, int size);
 
-void Cubie_rotateLeft(Cubie *cubie);
+void cubie_rotate_right (cubie_t *cubie);
+void cubie_rotate_left (cubie_t *cubie);
+void cubie_rotate_up (cubie_t *cubie);
+void cubie_rotate_down (cubie_t *cubie);
+void cubie_rotate_clockwise (cubie_t *cubie);
+void cubie_rotate_anticlockwise (cubie_t *cubie);
 
-void Cubie_rotateUp(Cubie *cubie);
+/* Render the cubie at world-space `position`. To animate a layer rotation,
+ * pass the rotation axis as `rotation_axis` (also used as a pivot offset)
+ * and the angle in degrees as `rotation_angle`. For static rendering (no
+ * animation transform), pass {0,0,0} as `rotation_axis` and 0 as
+ * `rotation_angle`. */
+void cubie_draw (cubie_t *cubie, Vector3 position, Vector3 rotation_axis,
+                 float rotation_angle);
 
-void Cubie_rotateDown(Cubie *cubie);
-
-void Cubie_rotateClockWise(Cubie *cubie);
-
-void Cubie_rotateAntiClockWise(Cubie *cubie);
-
-void Cubie_drawCubie(Cubie *cubie, Vector3 position, Vector3 rotationAxis,
-                     float rotationAngle);
-
-char Cubie_getColor(Cubie *cubie, Face face);
-
-#endif // !CUBLET_H
+#endif // CUBLET_H
