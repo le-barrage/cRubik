@@ -1,79 +1,93 @@
 #include "queue.h"
+
 #include <stdlib.h>
 
-Queue
-Queue_make ()
+struct queue_node
 {
-  Queue queue;
-  queue.front = NULL;
-  queue.rear = NULL;
-  return queue;
+  Rotation data;
+  struct queue_node *next;
+};
+
+struct queue
+{
+  struct queue_node *front;
+  struct queue_node *rear;
+};
+
+queue_t *
+queue_create (void)
+{
+  queue_t *q = malloc (sizeof (*q));
+  if (q == NULL)
+    return NULL;
+  q->front = NULL;
+  q->rear = NULL;
+  return q;
 }
 
-Node *
-Node_make (Rotation data)
+void
+queue_destroy (queue_t *q)
 {
-  Node *node = (Node *)malloc (sizeof (Node));
-  node->data = data;
-  node->next = NULL;
-  return node;
+  if (q == NULL)
+    return;
+  queue_clear (q);
+  free (q);
 }
 
 bool
-Queue_isEmpty (Queue *queue)
+queue_is_empty (const queue_t *q)
 {
-  return queue->front == NULL;
+  return q->front == NULL;
 }
 
-void
-Queue_add (Queue *queue, Rotation data)
+queue_status_t
+queue_push (queue_t *q, Rotation value)
 {
-  Node *node = Node_make (data);
-  if (Queue_isEmpty (queue))
-    {
-      queue->front = node;
-      queue->rear = node;
-    }
+  struct queue_node *node = malloc (sizeof (*node));
+  if (node == NULL)
+    return QUEUE_OOM;
+
+  node->data = value;
+  node->next = NULL;
+
+  if (q->rear == NULL)
+    q->front = node;
   else
-    {
-      queue->rear->next = node;
-      queue->rear = node;
-    }
+    q->rear->next = node;
+  q->rear = node;
+
+  return QUEUE_OK;
 }
 
-Rotation
-Queue_pop (Queue *queue)
+queue_status_t
+queue_pop (queue_t *q, Rotation *out)
 {
-  if (Queue_isEmpty (queue))
-    {
-      return -1;
-    }
-  Node *node = queue->front;
-  Rotation data = node->data;
-  queue->front = node->next;
-  if (queue->front == NULL)
-    {
-      queue->rear = NULL;
-    }
+  if (q->front == NULL)
+    return QUEUE_EMPTY;
+
+  struct queue_node *node = q->front;
+  *out = node->data;
+  q->front = node->next;
+  if (q->front == NULL)
+    q->rear = NULL;
   free (node);
-  return data;
+
+  return QUEUE_OK;
 }
 
-Rotation
-Queue_peek (Queue *queue)
+queue_status_t
+queue_peek (const queue_t *q, Rotation *out)
 {
-  if (Queue_isEmpty (queue))
-    {
-      return -1;
-    }
-  return queue->front->data;
+  if (q->front == NULL)
+    return QUEUE_EMPTY;
+  *out = q->front->data;
+  return QUEUE_OK;
 }
 
 void
-Queue_clear (Queue *queue)
+queue_clear (queue_t *q)
 {
-  while (!Queue_isEmpty (queue))
-    {
-      Queue_pop (queue);
-    }
+  Rotation discard;
+  while (queue_pop (q, &discard) == QUEUE_OK)
+    ;
 }

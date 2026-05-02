@@ -2,29 +2,33 @@
 #define QUEUE_H
 
 #include "cube.h"
+#include <stdbool.h>
 
-typedef struct Node {
-  Rotation data;
-  struct Node *next;
-} Node;
+/* Opaque FIFO queue of Rotation values. Construct with queue_create, free
+ * with queue_destroy. */
+typedef struct queue queue_t;
 
-typedef struct Queue {
-  Node *front;
-  Node *rear;
-} Queue;
+typedef enum
+{
+  QUEUE_OK = 0,
+  QUEUE_EMPTY,
+  QUEUE_OOM,
+} queue_status_t;
 
-Queue Queue_make();
+/* Ownership: queue_create returns a heap-allocated queue. The caller must
+ * release it with queue_destroy. Returns NULL on allocation failure. */
+queue_t *queue_create (void);
 
-Node *Node_make(Rotation data);
+/* NULL-safe. Frees every remaining node and the queue itself. */
+void queue_destroy (queue_t *q);
 
-bool Queue_isEmpty(Queue *queue);
+/* Frees every remaining node. The queue stays valid (empty) and reusable. */
+void queue_clear (queue_t *q);
 
-void Queue_add(Queue *queue, Rotation data);
+bool queue_is_empty (const queue_t *q);
 
-Rotation Queue_pop(Queue *queue);
+queue_status_t queue_push (queue_t *q, Rotation value);
+queue_status_t queue_pop (queue_t *q, Rotation *out);
+queue_status_t queue_peek (const queue_t *q, Rotation *out);
 
-Rotation Queue_peek(Queue *queue);
-
-void Queue_clear(Queue *queue);
-
-#endif // !QUEUE_H
+#endif // QUEUE_H

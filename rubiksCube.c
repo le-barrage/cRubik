@@ -43,7 +43,7 @@ Cube cube;
 char **scramble, *currentScramble, currentSolution[100], solutionFoundText[45],
     times[5][20], avg[10];
 int currentSolutionSize;
-Queue queue;
+queue_t *queue;
 bool isSolutionRunning = false, isThreadLaunched = false;
 pthread_t solutionThread;
 
@@ -131,9 +131,9 @@ handleRotation (Rotation clockwise, Rotation antiClockwise)
   currentSolution[0] = '\0';
   currentSolutionSize = 0;
   if (IsKeyDown (keyBindings.key_ALT))
-    Queue_add (&queue, antiClockwise);
+    queue_push (queue, antiClockwise);
   else
-    Queue_add (&queue, clockwise);
+    queue_push (queue, clockwise);
 }
 
 void
@@ -245,7 +245,7 @@ void
 resetAnimationAndSolution ()
 {
   cube.isAnimating = false;
-  Queue_clear (&queue);
+  queue_clear (queue);
 }
 
 void
@@ -325,7 +325,7 @@ applyCurrentSolution ()
         }
       else if (nextMove == '2')
         {
-          Queue_add (&queue, getCorrespondingRotation (currMove));
+          queue_push (queue, getCorrespondingRotation (currMove));
           rotation = currMove;
           i++;
         }
@@ -333,7 +333,7 @@ applyCurrentSolution ()
         {
           rotation = currMove;
         }
-      Queue_add (&queue, getCorrespondingRotation (rotation));
+      queue_push (queue, getCorrespondingRotation (rotation));
       i++;
     }
 }
@@ -446,7 +446,7 @@ handleQueue ()
 {
   if (cube.isAnimating)
     return;
-  if (Queue_isEmpty (&queue))
+  if (queue_is_empty (queue))
     {
       if (isSolutionRunning)
         {
@@ -461,8 +461,11 @@ handleQueue ()
         }
       return;
     }
+  Rotation popped;
+  if (queue_pop (queue, &popped) != QUEUE_OK)
+    return;
   cube.isAnimating = true;
-  cube.currentRotation = Queue_pop (&queue);
+  cube.currentRotation = popped;
   if (playback.active)
     {
       if (playback.popsRemaining <= 0)
@@ -584,7 +587,7 @@ drawPatternsScreen ()
               patternText[0] = '\0';
               for (size_t j = 0; j < patterns[i].size; j++)
                 {
-                  Queue_add (&queue, patterns[i].pattern[j]);
+                  queue_push (queue, patterns[i].pattern[j]);
                   char tok[3];
                   Cube_rotationToken (patterns[i].pattern[j], tok);
                   size_t tokLen = strlen (tok);
@@ -616,6 +619,20 @@ drawPatternsScreen ()
     SetMouseCursor (MOUSE_CURSOR_DEFAULT);
 }
 
+/* DrawText cursor advance after rendering `s` at x=0.
+ *
+ * raylib's DrawText advances its internal cursor by (advanceX*scale + spacing)
+ * per character, so after N characters the cursor sits at
+ *   sum(advanceX)*scale + N*spacing.
+ * MeasureText returns the same minus one trailing spacing (it doesn't
+ * account for the spacing past the last character) so adding `spacing`
+ * once recovers the cursor position. Both formulas keep `spacing` unscaled.
+ *
+ * If we placed an overlay piece at lineX + MeasureText(prefix) directly,
+ * the piece would land `spacing` pixels too far left.
+ *
+ * `spacing` follows raylib's DrawText default: fontSize/10, clamped >= 1. 
+*/
 static int
 drawTextCursorAfter (const char *s, int fontSize)
 {
@@ -624,12 +641,21 @@ drawTextCursorAfter (const char *s, int fontSize)
     spacing = 1;
   return MeasureText(s, fontSize) + spacing;
 }
+
+/* Renders a space-separated token sequence with greedy line wrapping at the
+ * screen width. Pass highlightToken = -1 for no highlight. The whole line is
+ * always drawn once in BLACK; if a token in this line is highlighted, that
+ * token is overlaid in GOLD at the cursor-advance position after the prefix.
+ * raylib's default font is a non-AA bitmap, so the overlay replaces pixels
+ * cleanly. 
+*/
 void
 DrawMoves (const char *text, float fontSize, int y, int highlightToken)
 {
   if (strlen (text) == 0)
     return;
 
+  // tokenize
   char workCopy[256];
   strncpy (workCopy, text, sizeof (workCopy) - 1);
   workCopy[sizeof (workCopy) - 1] = '\0';
@@ -645,6 +671,7 @@ DrawMoves (const char *text, float fontSize, int y, int highlightToken)
   int maxWidth = GetScreenWidth () - DEFAULT_FONT_SIZE;
   int lineHeight = 30;
 
+  // figure out line breaks
   int lineStart[16] = { 0 };
   int lineCount = 1;
 
@@ -677,11 +704,13 @@ DrawMoves (const char *text, float fontSize, int y, int highlightToken)
     }
   lineStart[lineCount] = tokenCount;
 
+  // build line strings and draw
   for (int line = 0; line < lineCount; line++)
     {
       int startIdx = lineStart[line];
       int endIdx = lineStart[line + 1];
 
+      // build
       char buf[256];
       int len = 0;
       for (int i = startIdx; i < endIdx; i++)
@@ -696,6 +725,7 @@ DrawMoves (const char *text, float fontSize, int y, int highlightToken)
         }
       buf[len] = '\0';
 
+      // draw line in center in BLACK
       int lineWidth = MeasureText (buf, fontSize);
       int lineX = (GetScreenWidth () - lineWidth) / 2;
       int yLine = y + line * lineHeight;
@@ -705,6 +735,7 @@ DrawMoves (const char *text, float fontSize, int y, int highlightToken)
       if (highlightToken < startIdx || highlightToken >= endIdx)
         continue;
 
+      // compute highlight overlay position
       int hOffset = 0;
       for (int i = startIdx; i < highlightToken; i++)
         hOffset += strlen (tokens[i]) + 1;
@@ -719,6 +750,7 @@ DrawMoves (const char *text, float fontSize, int y, int highlightToken)
           buf[hOffset] = saved;
         }
 
+      // draw highlight in GOLD
       char saved = buf[hOffset + hLen];
       buf[hOffset + hLen] = '\0';
       DrawText (buf + hOffset, overlayX, yLine, fontSize, GOLD);
@@ -888,7 +920,12 @@ initEverything (void *arg)
   initDefaultKeyBindings ();
   Options_load ();
   initCameraSettings ();
-  queue = Queue_make ();
+  queue = queue_create ();
+  if (queue == NULL)
+    {
+      fprintf (stderr, "queue_create failed\n");
+      exit (1);
+    }
 
   timer = Timer_make ();
   getLast5Solves (times, SIZE);
@@ -1007,6 +1044,7 @@ main (int argc, char **argv)
   free (currentScramble);
   free (scramble);
   Cube_free (cube);
+  queue_destroy (queue);
 
   CloseWindow ();
   return 0;
