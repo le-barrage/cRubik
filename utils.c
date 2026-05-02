@@ -7,7 +7,7 @@ colors_equal (Color a, Color b)
 }
 
 int
-Cnk (int n, int k)
+binomial (int n, int k)
 {
   int i, j, s;
   if (n < k)

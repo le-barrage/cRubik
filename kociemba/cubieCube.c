@@ -241,7 +241,7 @@ short getFRtoBR(CubieCube *cubieCube) {
   for (int j = BR; j >= UR; j--) {
     if (FR <= cubieCube->edgePermutation[j] &&
         cubieCube->edgePermutation[j] <= BR) {
-      a += Cnk(11 - j, x + 1);
+      a += binomial(11 - j, x + 1);
       edge4[3 - x++] = cubieCube->edgePermutation[j];
     }
   }
@@ -274,9 +274,9 @@ void setFRtoBR(CubieCube *cubieCube, short idx) {
   }
   x = 3;
   for (int j = UR; j <= BR; j++)
-    if (a - Cnk(11 - j, x + 1) >= 0) {
+    if (a - binomial(11 - j, x + 1) >= 0) {
       cubieCube->edgePermutation[j] = sliceEdge[3 - x];
-      a -= Cnk(11 - j, x-- + 1);
+      a -= binomial(11 - j, x-- + 1);
     }
   x = 0;
   for (int j = UR; j <= BR; j++)
@@ -289,7 +289,7 @@ short getURFtoDLF(CubieCube *cubieCube) {
   Corner corner6[6] = {0};
   for (int j = URF; j <= DRB; j++)
     if (cubieCube->cornerPermutation[j] <= DLF) {
-      a += Cnk(j, x + 1);
+      a += binomial(j, x + 1);
       corner6[x++] = cubieCube->cornerPermutation[j];
     }
   int b = 0;
@@ -320,9 +320,9 @@ void setURFtoDLF(CubieCube *cubieCube, short idx) {
   }
   x = 5;
   for (int j = DRB; j >= 0; j--)
-    if (a - Cnk(j, x + 1) >= 0) {
+    if (a - binomial(j, x + 1) >= 0) {
       cubieCube->cornerPermutation[j] = corner6[x];
-      a -= Cnk(j, x-- + 1);
+      a -= binomial(j, x-- + 1);
     }
   x = 0;
   for (int j = URF; j <= DRB; j++)
@@ -335,7 +335,7 @@ int getURtoDF(CubieCube *cubieCube) {
   Edge edge6[6] = {0};
   for (int j = UR; j <= BR; j++)
     if (cubieCube->edgePermutation[j] <= DF) {
-      a += Cnk(j, x + 1);
+      a += binomial(j, x + 1);
       edge6[x++] = cubieCube->edgePermutation[j];
     }
   int b = 0;
@@ -366,9 +366,9 @@ void setURtoDF(CubieCube *cubieCube, int idx) {
   }
   x = 5;
   for (int j = BR; j >= 0; j--)
-    if (a - Cnk(j, x + 1) >= 0) {
+    if (a - binomial(j, x + 1) >= 0) {
       cubieCube->edgePermutation[j] = edge6[x];
-      a -= Cnk(j, x-- + 1);
+      a -= binomial(j, x-- + 1);
     }
   x = 0;
   for (int j = UR; j <= BR; j++)
@@ -381,7 +381,7 @@ short getURtoUL(CubieCube *cubieCube) {
   Edge edge3[3] = {0};
   for (int j = UR; j <= BR; j++)
     if (cubieCube->edgePermutation[j] <= UL) {
-      a += Cnk(j, x + 1);
+      a += binomial(j, x + 1);
       edge3[x++] = cubieCube->edgePermutation[j];
     }
 
@@ -412,9 +412,9 @@ void setURtoUL(CubieCube *cubieCube, short idx) {
   }
   x = 2;
   for (int j = BR; j >= 0; j--)
-    if (a - Cnk(j, x + 1) >= 0) {
+    if (a - binomial(j, x + 1) >= 0) {
       cubieCube->edgePermutation[j] = edge3[x];
-      a -= Cnk(j, x-- + 1);
+      a -= binomial(j, x-- + 1);
     }
 }
 
@@ -424,7 +424,7 @@ short getUBtoDF(CubieCube *cubieCube) {
   for (int j = UR; j <= BR; j++)
     if (UB <= cubieCube->edgePermutation[j] &&
         cubieCube->edgePermutation[j] <= DF) {
-      a += Cnk(j, x + 1);
+      a += binomial(j, x + 1);
       edge3[x++] = cubieCube->edgePermutation[j];
     }
 
@@ -455,9 +455,9 @@ void setUBtoDF(CubieCube *cubieCube, short idx) {
   }
   x = 2;
   for (int j = BR; j >= 0; j--)
-    if (a - Cnk(j, x + 1) >= 0) {
+    if (a - binomial(j, x + 1) >= 0) {
       cubieCube->edgePermutation[j] = edge3[x];
-      a -= Cnk(j, x-- + 1);
+      a -= binomial(j, x-- + 1);
     }
 }
 

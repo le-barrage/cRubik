@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #include "include/raylib.h"
+#include <stdbool.h>
 
 #define ARRAY_LEN(array) (sizeof (array) / sizeof (array[0]))
 
@@ -9,6 +10,6 @@
 
 bool colors_equal (Color a, Color b);
 
-int Cnk (int n, int k);
+int binomial (int n, int k);
 
 #endif // UTILS_H
