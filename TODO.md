@@ -12,7 +12,7 @@
 
 - add inspection time 
 
-- print corresponding key in options
+- ~~print corresponding key in options~~ Add more character
 
 - change font
 

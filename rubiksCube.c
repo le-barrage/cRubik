@@ -4,6 +4,7 @@
 #include "kociemba/coordCube.h"
 #include "kociemba/enums.h"
 #include "kociemba/twoPhase.h"
+#include "options.h"
 #include "patterns.h"
 #include "queue.h"
 #include "scramble.h"
@@ -27,19 +28,9 @@
 #define CUBIE_SIZE 0.98
 #define BACKGROUND_COLOR GRAY
 
-#define DEFAULT_FONT_SIZE 20
-
 #define KEEP_SPACE_DOWN_MS 300
 
 short SOLUTION_DEPTH = 22;
-
-typedef enum
-{
-  SOLVER_REORIENT,
-  SOLVER_PRESERVE
-} SolverOutputMode;
-
-SolverOutputMode solverOutputMode = SOLVER_REORIENT;
 
 float camera_mag;
 float camera_mag_vel;
@@ -486,222 +477,6 @@ drawHelpScreen ()
 }
 
 void
-rotationSpeedSlider (int startY)
-{
-  float r = (float)ROTATIONSPEED;
-  int sliderWidth = 150, sliderHeight = 30;
-  Rectangle sliderRectangle
-      = (Rectangle){ .x = (float)(GetScreenWidth () - sliderWidth) / 2,
-                     .y = (float)startY,
-                     .width = sliderWidth,
-                     .height = sliderHeight };
-
-  if (GuiSlider (sliderRectangle, "0", "30", &r, 1.f, 30.f))
-    {
-      ROTATIONSPEED = (int)r;
-    }
-  char *crs = "Cube Rotation Speed:";
-  DrawText (
-      crs,
-      sliderRectangle.x
-          + (sliderRectangle.width - MeasureText (crs, DEFAULT_FONT_SIZE)) / 2,
-      sliderRectangle.y - 30, DEFAULT_FONT_SIZE, BLACK);
-  const char *rs = TextFormat ("%d", ROTATIONSPEED);
-  DrawText (rs,
-            sliderRectangle.x
-                + (sliderRectangle.width - MeasureText (rs, DEFAULT_FONT_SIZE))
-                      / 2,
-            sliderRectangle.y + sliderRectangle.height + 10, DEFAULT_FONT_SIZE,
-            BLACK);
-}
-
-static int editingKeyIndex = -1;
-
-typedef struct
-{
-  const char *name;
-  int *keyPtr;
-} KeyBindingEntry;
-
-static KeyBindingEntry keyBindingEntries[13];
-
-void
-initKeyBindingEntries ()
-{
-  keyBindingEntries[0] = (KeyBindingEntry){ "R", &keyBindings.key_R };
-  keyBindingEntries[1] = (KeyBindingEntry){ "L", &keyBindings.key_L };
-  keyBindingEntries[2] = (KeyBindingEntry){ "U", &keyBindings.key_U };
-  keyBindingEntries[3] = (KeyBindingEntry){ "D", &keyBindings.key_D };
-  keyBindingEntries[4] = (KeyBindingEntry){ "F", &keyBindings.key_F };
-  keyBindingEntries[5] = (KeyBindingEntry){ "B", &keyBindings.key_B };
-  keyBindingEntries[6] = (KeyBindingEntry){ "M", &keyBindings.key_M };
-  keyBindingEntries[7] = (KeyBindingEntry){ "S", &keyBindings.key_S };
-  keyBindingEntries[8] = (KeyBindingEntry){ "E", &keyBindings.key_E };
-  keyBindingEntries[9] = (KeyBindingEntry){ "X", &keyBindings.key_X };
-  keyBindingEntries[10] = (KeyBindingEntry){ "Y", &keyBindings.key_Y };
-  keyBindingEntries[11] = (KeyBindingEntry){ "Z", &keyBindings.key_Z };
-  keyBindingEntries[12] = (KeyBindingEntry){ "CCW", &keyBindings.key_ALT };
-}
-
-void
-drawKeyBindingsUI (int startY)
-{
-  static bool initialized = false;
-  if (!initialized)
-    {
-      initKeyBindingEntries ();
-      initialized = true;
-    }
-
-  int buttonWidth = 120;
-  int buttonHeight = 35;
-  int labelWidth = 50;
-  int spacing = 15;
-  int columns = 3;
-  int totalWidth = columns * (labelWidth + buttonWidth + spacing * 2);
-  int startX = (GetScreenWidth () - totalWidth) / 2;
-
-  const char *title = "Key Bindings (click to change):";
-  int titleWidth = MeasureText (title, DEFAULT_FONT_SIZE);
-  DrawText (title, (GetScreenWidth () - titleWidth) / 2, startY,
-            DEFAULT_FONT_SIZE, BLACK);
-
-  startY += 40;
-
-  bool isHoveringButton = false;
-
-  for (int i = 0; i < 13; i++)
-    {
-      int row = i / columns;
-      int col = i % columns;
-      int x = startX + col * (labelWidth + buttonWidth + spacing * 3);
-      int y = startY + row * (buttonHeight + spacing);
-
-      DrawText (TextFormat ("%s:", keyBindingEntries[i].name), x,
-                y + (buttonHeight - DEFAULT_FONT_SIZE) / 2, DEFAULT_FONT_SIZE,
-                BLACK);
-
-      Rectangle button = (Rectangle){ .x = x + labelWidth,
-                                      .y = y,
-                                      .width = buttonWidth,
-                                      .height = buttonHeight };
-
-      bool isHovering = CheckCollisionPointRec (GetMousePosition (), button);
-      bool isEditing = (editingKeyIndex == i);
-      isHoveringButton |= isHovering;
-
-      Color buttonColor;
-      if (isEditing)
-        buttonColor = GREEN;
-      else if (isHovering)
-        buttonColor = ColorBrightness (DARKGRAY, -0.1f);
-      else
-        buttonColor = ColorBrightness (DARKGRAY, 0.1f);
-
-      DrawRectangleRounded (button, 0.2f, 0, buttonColor);
-
-      const char *keyText;
-      if (isEditing)
-        keyText = "Press key...";
-      else
-        keyText = getKeyName (*keyBindingEntries[i].keyPtr);
-
-      int textW = MeasureText (keyText, DEFAULT_FONT_SIZE);
-      DrawText (keyText, button.x + (button.width - textW) / 2,
-                button.y + (button.height - DEFAULT_FONT_SIZE) / 2,
-                DEFAULT_FONT_SIZE, isEditing ? WHITE : BLACK);
-
-      if (isHovering && IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
-        {
-          editingKeyIndex = i;
-        }
-    }
-
-  if (editingKeyIndex >= 0)
-    {
-      int key = GetKeyPressed ();
-      if (key)
-        printf ("%d\n", key);
-      if (key > 0 && key != KEY_O && key != KEY_ESCAPE && key != KEY_SPACE
-          && key != KEY_ENTER) // Don't allow 'O' as it exits options
-        {
-          *keyBindingEntries[editingKeyIndex].keyPtr = key;
-          editingKeyIndex = -1;
-        }
-      if (IsKeyPressed (KEY_ESCAPE))
-        {
-          editingKeyIndex = -1;
-        }
-    }
-
-  const char *resetText = "Reset to Defaults";
-  int resetTextW = MeasureText (resetText, DEFAULT_FONT_SIZE);
-
-  int resetButtonWidth = resetTextW + 20;
-  int resetButtonHeight = 35;
-  int resetY = startY + (13 / columns + 1) * (buttonHeight + spacing) + 20;
-  Rectangle resetButton
-      = (Rectangle){ .x = (GetScreenWidth () - resetButtonWidth) / 2,
-                     .y = resetY,
-                     .width = resetButtonWidth,
-                     .height = resetButtonHeight };
-
-  bool isHoveringReset
-      = CheckCollisionPointRec (GetMousePosition (), resetButton);
-  DrawRectangleRounded (resetButton, 0.2f, 0,
-                        isHoveringReset ? ColorBrightness (MAROON, -0.1f)
-                                        : ColorBrightness (MAROON, 0.1f));
-  DrawText (resetText, resetButton.x + (resetButton.width - resetTextW) / 2,
-            resetButton.y + (resetButton.height - DEFAULT_FONT_SIZE) / 2,
-            DEFAULT_FONT_SIZE, WHITE);
-
-  isHoveringButton |= isHoveringReset;
-  if (isHoveringButton)
-    SetMouseCursor (MOUSE_CURSOR_POINTING_HAND);
-  else
-    SetMouseCursor (MOUSE_CURSOR_DEFAULT);
-
-  if (isHoveringReset && IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
-    {
-      initDefaultKeyBindings ();
-      editingKeyIndex = -1;
-    }
-}
-
-void
-solverOutputModeToggle (int startY)
-{
-  int toggleWidth = 280, toggleHeight = 30;
-  Rectangle bounds
-      = (Rectangle){ .x = (float)(GetScreenWidth () - toggleWidth) / 2,
-                     .y = (float)startY,
-                     .width = (float)toggleWidth / 2,
-                     .height = (float)toggleHeight };
-
-  int active = (int)solverOutputMode;
-  GuiToggleGroup (bounds, "Re-orient cube;Preserve view", &active);
-  solverOutputMode = (SolverOutputMode)active;
-
-  const char *label = "Solver output:";
-  DrawText (label, (GetScreenWidth () - MeasureText (label, DEFAULT_FONT_SIZE)) / 2,
-            startY - 30, DEFAULT_FONT_SIZE, BLACK);
-}
-
-// TODO: save options to a file
-void
-drawOptionsScreen ()
-{
-  ClearBackground (BACKGROUND_COLOR);
-  int textWidth = MeasureText ("Press 'o' to exit.", DEFAULT_FONT_SIZE);
-  DrawText ("Press 'o' to exit.", GetScreenWidth () - textWidth - 10, 10,
-            DEFAULT_FONT_SIZE, DARKGRAY);
-
-  drawKeyBindingsUI (60);
-  rotationSpeedSlider (450);
-  solverOutputModeToggle (550);
-}
-
-void
 drawPatternsScreen ()
 {
   ClearBackground (BACKGROUND_COLOR);
@@ -983,7 +758,7 @@ UpdateDrawFrame ()
   if (showHelp)
     drawHelpScreen ();
   else if (showOptions)
-    drawOptionsScreen ();
+    Options_drawScreen ();
   else if (showPatterns)
     drawPatternsScreen ();
   else

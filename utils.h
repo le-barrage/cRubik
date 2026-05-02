@@ -12,6 +12,8 @@
 
 #define ARRAY_LEN(array) (sizeof (array) / sizeof (array[0]))
 
+#define DEFAULT_FONT_SIZE 20
+
 typedef struct {
   int key_R;
   int key_L;
