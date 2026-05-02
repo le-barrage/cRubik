@@ -536,7 +536,7 @@ Cube_rotate (Cube *cube, Rotation rotation, int numberOfLayers)
 }
 
 char
-Cube_getFaceFromColor (cubie_t cubie, Face face)
+Cube_getFaceFromColor (cubie_t cubie, face_t face)
 {
   Color color = cubie.colors[face];
 
@@ -564,39 +564,39 @@ Cube_toString (Cube *cube, char cubeStr[55])
     for (int x = 0; x < SIZE; x++)
       {
         cubeStr[index]
-            = Cube_getFaceFromColor (cube->cube[x][SIZE - 1][z], UP);
+            = Cube_getFaceFromColor (cube->cube[x][SIZE - 1][z], FACE_UP);
         index++;
       }
   for (int x = SIZE - 1; x >= 0; x--)
     for (int z = SIZE - 1; z >= 0; z--)
       {
         cubeStr[index]
-            = Cube_getFaceFromColor (cube->cube[SIZE - 1][x][z], RIGHT);
+            = Cube_getFaceFromColor (cube->cube[SIZE - 1][x][z], FACE_RIGHT);
         index++;
       }
   for (int z = SIZE - 1; z >= 0; z--)
     for (int x = 0; x < SIZE; x++)
       {
         cubeStr[index]
-            = Cube_getFaceFromColor (cube->cube[x][z][SIZE - 1], FRONT);
+            = Cube_getFaceFromColor (cube->cube[x][z][SIZE - 1], FACE_FRONT);
         index++;
       }
   for (int z = SIZE - 1; z >= 0; z--)
     for (int x = 0; x < SIZE; x++)
       {
-        cubeStr[index] = Cube_getFaceFromColor (cube->cube[x][0][z], DOWN);
+        cubeStr[index] = Cube_getFaceFromColor (cube->cube[x][0][z], FACE_DOWN);
         index++;
       }
   for (int x = SIZE - 1; x >= 0; x--)
     for (int z = 0; z < SIZE; z++)
       {
-        cubeStr[index] = Cube_getFaceFromColor (cube->cube[0][x][z], LEFT);
+        cubeStr[index] = Cube_getFaceFromColor (cube->cube[0][x][z], FACE_LEFT);
         index++;
       }
   for (int z = SIZE - 1; z >= 0; z--)
     for (int x = SIZE - 1; x >= 0; x--)
       {
-        cubeStr[index] = Cube_getFaceFromColor (cube->cube[x][z][0], BACK);
+        cubeStr[index] = Cube_getFaceFromColor (cube->cube[x][z][0], FACE_BACK);
         index++;
       }
   cubeStr[index] = '\0';
@@ -606,34 +606,34 @@ Cube_toString (Cube *cube, char cubeStr[55])
 /*----------------------------------------------------------------*/
 
 static const Color CANONICAL_COLOR[6] = {
-  [UP] = WHITE,   [FRONT] = GREEN, [RIGHT] = RED,
-  [BACK] = BLUE,  [LEFT] = ORANGE, [DOWN] = YELLOW,
+  [FACE_UP] = WHITE,   [FACE_FRONT] = GREEN, [FACE_RIGHT] = RED,
+  [FACE_BACK] = BLUE,  [FACE_LEFT] = ORANGE, [FACE_DOWN] = YELLOW,
 };
 
 static Color
-worldCenterColor (Cube *cube, Face face)
+worldCenterColor (Cube *cube, face_t face)
 {
   int mid = SIZE / 2;
   switch (face)
     {
-    case UP:    return cube->cube[mid][SIZE - 1][mid].colors[UP];
-    case DOWN:  return cube->cube[mid][0][mid].colors[DOWN];
-    case FRONT: return cube->cube[mid][mid][SIZE - 1].colors[FRONT];
-    case BACK:  return cube->cube[mid][mid][0].colors[BACK];
-    case LEFT:  return cube->cube[0][mid][mid].colors[LEFT];
-    case RIGHT: return cube->cube[SIZE - 1][mid][mid].colors[RIGHT];
+    case FACE_UP:    return cube->cube[mid][SIZE - 1][mid].colors[FACE_UP];
+    case FACE_DOWN:  return cube->cube[mid][0][mid].colors[FACE_DOWN];
+    case FACE_FRONT: return cube->cube[mid][mid][SIZE - 1].colors[FACE_FRONT];
+    case FACE_BACK:  return cube->cube[mid][mid][0].colors[FACE_BACK];
+    case FACE_LEFT:  return cube->cube[0][mid][mid].colors[FACE_LEFT];
+    case FACE_RIGHT: return cube->cube[SIZE - 1][mid][mid].colors[FACE_RIGHT];
     }
   return BLACK;
 }
 
-static Face
+static face_t
 findWorldFaceShowing (Cube *cube, Color target)
 {
-  Face all[6] = { UP, FRONT, RIGHT, BACK, LEFT, DOWN };
+  face_t all[6] = { FACE_UP, FACE_FRONT, FACE_RIGHT, FACE_BACK, FACE_LEFT, FACE_DOWN };
   for (int i = 0; i < 6; i++)
     if (colors_equal (worldCenterColor (cube, all[i]), target))
       return all[i];
-  return UP;
+  return FACE_UP;
 }
 
 CubeOrientation
@@ -645,28 +645,28 @@ Cube_detectOrientationAndNormalize (Cube *src, Cube *outCanonical)
 
   *outCanonical = Cube_deepCopy (src);
 
-  Face whitePos = findWorldFaceShowing (outCanonical, WHITE);
+  face_t whitePos = findWorldFaceShowing (outCanonical, WHITE);
   switch (whitePos)
     {
-    case UP:
+    case FACE_UP:
       break;
-    case FRONT:
+    case FACE_FRONT:
       Cube_rotate (outCanonical, X, SIZE / 2);
       o.moves[o.count++] = X;
       break;
-    case BACK:
+    case FACE_BACK:
       Cube_rotate (outCanonical, x, SIZE / 2);
       o.moves[o.count++] = x;
       break;
-    case LEFT:
+    case FACE_LEFT:
       Cube_rotate (outCanonical, Z, SIZE / 2);
       o.moves[o.count++] = Z;
       break;
-    case RIGHT:
+    case FACE_RIGHT:
       Cube_rotate (outCanonical, z, SIZE / 2);
       o.moves[o.count++] = z;
       break;
-    case DOWN:
+    case FACE_DOWN:
       Cube_rotate (outCanonical, X, SIZE / 2);
       Cube_rotate (outCanonical, X, SIZE / 2);
       o.moves[o.count++] = X;
@@ -674,20 +674,20 @@ Cube_detectOrientationAndNormalize (Cube *src, Cube *outCanonical)
       break;
     }
 
-  Face greenPos = findWorldFaceShowing (outCanonical, GREEN);
+  face_t greenPos = findWorldFaceShowing (outCanonical, GREEN);
   switch (greenPos)
     {
-    case FRONT:
+    case FACE_FRONT:
       break;
-    case RIGHT:
+    case FACE_RIGHT:
       Cube_rotate (outCanonical, Y, SIZE / 2);
       o.moves[o.count++] = Y;
       break;
-    case LEFT:
+    case FACE_LEFT:
       Cube_rotate (outCanonical, y, SIZE / 2);
       o.moves[o.count++] = y;
       break;
-    case BACK:
+    case FACE_BACK:
       Cube_rotate (outCanonical, Y, SIZE / 2);
       Cube_rotate (outCanonical, Y, SIZE / 2);
       o.moves[o.count++] = Y;
@@ -746,16 +746,16 @@ Cube_appendNormalizationTokens (char *buf, const CubeOrientation *o)
 }
 
 char
-Cube_faceLetter (Face f)
+Cube_faceLetter (face_t f)
 {
   switch (f)
     {
-    case UP:    return 'U';
-    case RIGHT: return 'R';
-    case FRONT: return 'F';
-    case DOWN:  return 'D';
-    case LEFT:  return 'L';
-    case BACK:  return 'B';
+    case FACE_UP:    return 'U';
+    case FACE_RIGHT: return 'R';
+    case FACE_FRONT: return 'F';
+    case FACE_DOWN:  return 'D';
+    case FACE_LEFT:  return 'L';
+    case FACE_BACK:  return 'B';
     }
   return '?';
 }

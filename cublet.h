@@ -7,13 +7,13 @@
 
 typedef enum
 {
-  UP,
-  FRONT,
-  RIGHT,
-  BACK,
-  LEFT,
-  DOWN
-} Face;
+  FACE_UP,
+  FACE_FRONT,
+  FACE_RIGHT,
+  FACE_BACK,
+  FACE_LEFT,
+  FACE_DOWN
+} face_t;
 
 /* A single small cube ("cubie") inside the larger Rubik's cube. Tracks the
  * color shown on each of its 6 faces: an inner cubie has BLACK on every

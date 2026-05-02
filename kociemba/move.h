@@ -4,10 +4,10 @@
 #include "enums.h"
 
 typedef struct Move {
-  Face orientation;
+  face_t orientation;
   Direction direction;
 } Move;
 
-Move Move_createMove(Face orientation, Direction direction);
+Move Move_createMove(face_t orientation, Direction direction);
 
 #endif // !MOVE_H

@@ -1,19 +1,19 @@
 #include "enums.h"
 
-Face getCorrespondingColor(char color) {
+face_t getCorrespondingColor(char color) {
   switch (color) {
   case 'U':
-    return UP;
+    return FACE_UP;
   case 'R':
-    return RIGHT;
+    return FACE_RIGHT;
   case 'F':
-    return FRONT;
+    return FACE_FRONT;
   case 'D':
-    return DOWN;
+    return FACE_DOWN;
   case 'L':
-    return LEFT;
+    return FACE_LEFT;
   case 'B':
-    return BACK;
+    return FACE_BACK;
   }
-  return UP;
+  return FACE_UP;
 }

@@ -9,15 +9,15 @@ Facelet edgeFacelet[12][2] = {{U6, R2}, {U8, F2}, {U4, L2}, {U2, B2},
                               {D6, R8}, {D2, F8}, {D4, L8}, {D8, B8},
                               {F6, R4}, {F4, L6}, {B6, L4}, {B4, R6}};
 
-Face cornerColor[8][3] = {{UP, RIGHT, FRONT},   {UP, FRONT, LEFT},
-                          {UP, LEFT, BACK},     {UP, BACK, RIGHT},
-                          {DOWN, FRONT, RIGHT}, {DOWN, LEFT, FRONT},
-                          {DOWN, BACK, LEFT},   {DOWN, RIGHT, BACK}};
+face_t cornerColor[8][3] = {{FACE_UP, FACE_RIGHT, FACE_FRONT},   {FACE_UP, FACE_FRONT, FACE_LEFT},
+                          {FACE_UP, FACE_LEFT, FACE_BACK},     {FACE_UP, FACE_BACK, FACE_RIGHT},
+                          {FACE_DOWN, FACE_FRONT, FACE_RIGHT}, {FACE_DOWN, FACE_LEFT, FACE_FRONT},
+                          {FACE_DOWN, FACE_BACK, FACE_LEFT},   {FACE_DOWN, FACE_RIGHT, FACE_BACK}};
 
-Face edgeColor[12][3] = {{UP, RIGHT},   {UP, FRONT},   {UP, LEFT},
-                         {UP, BACK},    {DOWN, RIGHT}, {DOWN, FRONT},
-                         {DOWN, LEFT},  {DOWN, BACK},  {FRONT, RIGHT},
-                         {FRONT, LEFT}, {BACK, LEFT},  {BACK, RIGHT}};
+face_t edgeColor[12][3] = {{FACE_UP, FACE_RIGHT},   {FACE_UP, FACE_FRONT},   {FACE_UP, FACE_LEFT},
+                         {FACE_UP, FACE_BACK},    {FACE_DOWN, FACE_RIGHT}, {FACE_DOWN, FACE_FRONT},
+                         {FACE_DOWN, FACE_LEFT},  {FACE_DOWN, FACE_BACK},  {FACE_FRONT, FACE_RIGHT},
+                         {FACE_FRONT, FACE_LEFT}, {FACE_BACK, FACE_LEFT},  {FACE_BACK, FACE_RIGHT}};
 
 FaceCube FaceCube_make(const char *cubeString) {
   assert(strlen(cubeString) == 54);
@@ -33,12 +33,12 @@ CubieCube FaceCube_toCubieCube(FaceCube *faceCube) {
     cubieCubeToReturn.cornerPermutation[i] = URF;
   for (int i = 0; i < 12; i++)
     cubieCubeToReturn.edgePermutation[i] = UR;
-  Face color1, color2;
+  face_t color1, color2;
   short ori;
   for (Corner corner = URF; corner <= DRB; corner++) {
     for (ori = 0; ori < 3; ori++)
-      if (faceCube->facelets[cornerFacelet[corner][ori]] == UP ||
-          faceCube->facelets[cornerFacelet[corner][ori]] == DOWN)
+      if (faceCube->facelets[cornerFacelet[corner][ori]] == FACE_UP ||
+          faceCube->facelets[cornerFacelet[corner][ori]] == FACE_DOWN)
         break;
     color1 = faceCube->facelets[cornerFacelet[corner][(ori + 1) % 3]];
     color2 = faceCube->facelets[cornerFacelet[corner][(ori + 2) % 3]];

@@ -5,7 +5,7 @@
 #include "enums.h"
 
 typedef struct FaceCube {
-  Face facelets[54];
+  face_t facelets[54];
 } FaceCube;
 
 FaceCube FaceCube_make(const char *cubeString);

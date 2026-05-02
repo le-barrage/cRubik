@@ -264,10 +264,10 @@ int validateCubeStringAndInitCubieCube(char *cube, CubieCube *cubieCube) {
   return errorCode;
 }
 
-/* Kociemba's axis convention is U/R/F/D/L/B (0..5); the project's Face enum
- * orders faces as UP/FRONT/RIGHT/BACK/LEFT/DOWN.
+/* Kociemba's axis convention is U/R/F/D/L/B (0..5); the project's face_t enum
+ * orders faces as FACE_UP/FACE_FRONT/FACE_RIGHT/FACE_BACK/FACE_LEFT/FACE_DOWN.
 */
-static const Face KOCIEMBA_AXIS_TO_FACE[6] = { UP, RIGHT, FRONT, DOWN, LEFT, BACK };
+static const face_t KOCIEMBA_AXIS_TO_FACE[6] = { FACE_UP, FACE_RIGHT, FACE_FRONT, FACE_DOWN, FACE_LEFT, FACE_BACK };
 
 void createMovesList(Move moves[], int depth) {
   for (int i = 0; i < depth; i++) {

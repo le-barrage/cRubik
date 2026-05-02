@@ -42,7 +42,7 @@ typedef struct Cube {
 typedef struct {
   Rotation moves[4];
   int count;
-  Face faceMap[6];
+  face_t faceMap[6];
 } CubeOrientation;
 
 Cube Cube_make(float cubletSize);
@@ -66,7 +66,7 @@ CubeOrientation Cube_detectOrientationAndNormalize(Cube *src,
 
 void Cube_appendNormalizationTokens(char *buf, const CubeOrientation *o);
 
-char Cube_faceLetter(Face f);
+char Cube_faceLetter(face_t f);
 
 void Cube_rotationToken(Rotation r, char out[3]);
 

@@ -181,7 +181,7 @@ findSolutionAndUpdateMoves (Cube *cube, int depthLimit, int timeOut)
   for (int i = 0; i < depth; i++)
     {
       Move cur = moves[i];
-      Face emitFace = (solverOutputMode == SOLVER_PRESERVE)
+      face_t emitFace = (solverOutputMode == SOLVER_PRESERVE)
                           ? orientation.faceMap[cur.orientation]
                           : cur.orientation;
       currentSolution[len++] = Cube_faceLetter (emitFace);
