@@ -1,14 +1,17 @@
+#ifndef PATTERNS_H
+#define PATTERNS_H
+
 #include "cube.h"
-#include <stdlib.h>
-#ifndef PATTERN_H
+#include <stddef.h>
 
-typedef struct pattern {
-  Rotation *pattern;
-  size_t size;
-  char *name;
-} pattern;
+typedef struct
+{
+  const Rotation *moves;
+  size_t move_count;
+  const char *name;
+} pattern_t;
 
-extern pattern patterns[];
-extern const int PATTERNS_COUNT;
+extern const pattern_t PATTERNS[];
+extern const size_t PATTERNS_COUNT;
 
-#endif // !PATTERN_H
+#endif // PATTERNS_H

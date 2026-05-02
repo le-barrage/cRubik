@@ -571,7 +571,7 @@ drawPatternsScreen ()
   int startY = 100;
   bool isHoveringButton = false;
 
-  for (int i = 0; i < PATTERNS_COUNT; i++)
+  for (int i = 0; i < (int)PATTERNS_COUNT; i++)
     {
       int row = i / columns;
       int col = i % columns;
@@ -593,11 +593,11 @@ drawPatternsScreen ()
               char patternText[256];
               size_t pos = 0;
               patternText[0] = '\0';
-              for (size_t j = 0; j < patterns[i].size; j++)
+              for (size_t j = 0; j < PATTERNS[i].move_count; j++)
                 {
-                  queue_push (queue, patterns[i].pattern[j]);
+                  queue_push (queue, PATTERNS[i].moves[j]);
                   char tok[3];
-                  Cube_rotationToken (patterns[i].pattern[j], tok);
+                  Cube_rotationToken (PATTERNS[i].moves[j], tok);
                   size_t tokLen = strlen (tok);
                   size_t needed = (j > 0 ? 1 : 0) + tokLen;
                   if (pos + needed + 1 >= sizeof (patternText))
@@ -616,8 +616,8 @@ drawPatternsScreen ()
       else
         DrawRectangleRounded (button, 0.2, 0, ColorBrightness (DARKGRAY, .1f));
 
-      int textW = MeasureText (patterns[i].name, DEFAULT_FONT_SIZE);
-      DrawText (patterns[i].name, x + (buttonWidth - textW) / 2,
+      int textW = MeasureText (PATTERNS[i].name, DEFAULT_FONT_SIZE);
+      DrawText (PATTERNS[i].name, x + (buttonWidth - textW) / 2,
                 y + (buttonHeight - DEFAULT_FONT_SIZE) / 2, DEFAULT_FONT_SIZE,
                 BLACK);
     }
