@@ -23,6 +23,7 @@ SRCS := \
 	average.c \
 	cublet.c \
 	cube.c \
+	keybindings.c \
 	options.c \
 	patterns.c \
 	queue.c \

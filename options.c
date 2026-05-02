@@ -3,6 +3,7 @@
 #include "include/cJSON.h"
 #include "include/raygui.h"
 #include "include/raylib.h"
+#include "keybindings.h"
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,19 +28,19 @@ typedef struct
 } KeyBindingEntry;
 
 static const KeyBindingEntry keyBindingEntries[] = {
-  { "R",   &keyBindings.key_R   },
-  { "L",   &keyBindings.key_L   },
-  { "U",   &keyBindings.key_U   },
-  { "D",   &keyBindings.key_D   },
-  { "F",   &keyBindings.key_F   },
-  { "B",   &keyBindings.key_B   },
-  { "M",   &keyBindings.key_M   },
-  { "S",   &keyBindings.key_S   },
-  { "E",   &keyBindings.key_E   },
-  { "X",   &keyBindings.key_X   },
-  { "Y",   &keyBindings.key_Y   },
-  { "Z",   &keyBindings.key_Z   },
-  { "CCW", &keyBindings.key_ALT },
+  { "R",   &keybindings.key_R   },
+  { "L",   &keybindings.key_L   },
+  { "U",   &keybindings.key_U   },
+  { "D",   &keybindings.key_D   },
+  { "F",   &keybindings.key_F   },
+  { "B",   &keybindings.key_B   },
+  { "M",   &keybindings.key_M   },
+  { "S",   &keybindings.key_S   },
+  { "E",   &keybindings.key_E   },
+  { "X",   &keybindings.key_X   },
+  { "Y",   &keybindings.key_Y   },
+  { "Z",   &keybindings.key_Z   },
+  { "CCW", &keybindings.key_ALT },
 };
 #define KEY_BINDING_COUNT ARRAY_LEN (keyBindingEntries)
 
@@ -95,7 +96,7 @@ drawKeyBindingsUI (int startY)
 
       const char *keyText
           = isEditing ? "Press key..."
-                      : getKeyName (*keyBindingEntries[i].keyPtr);
+                      : key_name (*keyBindingEntries[i].keyPtr);
 
       int textW = MeasureText (keyText, DEFAULT_FONT_SIZE);
       DrawText (keyText, button.x + (button.width - textW) / 2,
@@ -200,7 +201,7 @@ drawResetButton (int y)
 void
 Options_resetToDefaults (void)
 {
-  initDefaultKeyBindings ();
+  keybindings_init ();
   ROTATIONSPEED = DEFAULT_ROTATION_SPEED;
   solverOutputMode = DEFAULT_SOLVER_OUTPUT_MODE;
   editingKeyIndex = -1;
@@ -280,7 +281,7 @@ Options_load (void)
         solverOutputMode = SOLVER_REORIENT;
     }
 
-  cJSON *kb = cJSON_GetObjectItemCaseSensitive (root, "keyBindings");
+  cJSON *kb = cJSON_GetObjectItemCaseSensitive (root, "keybindings");
   if (cJSON_IsObject (kb))
     {
       for (size_t i = 0; i < KEY_BINDING_COUNT; i++)
@@ -308,7 +309,7 @@ Options_save (void)
                            solverOutputMode == SOLVER_PRESERVE ? "preserve"
                                                                : "reorient");
 
-  cJSON *kb = cJSON_AddObjectToObject (root, "keyBindings");
+  cJSON *kb = cJSON_AddObjectToObject (root, "keybindings");
   if (kb)
     {
       for (size_t i = 0; i < KEY_BINDING_COUNT; i++)

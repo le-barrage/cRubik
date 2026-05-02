@@ -1,22 +1,13 @@
 #include "utils.h"
 #include "include/cJSON.h"
-#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-/* GLFW is statically linked into libraylib.a; forward-declare the one symbol
- * we need rather than depending on the GLFW header. glfwGetKeyName returns
- * the 'layout-aware' character that a physical key produces under the current
- * OS keyboard layout (e.g., the W-position key returns "z" on AZERTY). 
-*/
-extern const char *glfwGetKeyName (int key, int scancode);
-
 bool
-colorsEqual (Color color1, Color color2)
+colors_equal (Color a, Color b)
 {
-  return color1.a == color2.a && color1.r == color2.r && color1.g == color2.g
-         && color1.b == color2.b;
+  return a.a == b.a && a.r == b.r && a.g == b.g && a.b == b.b;
 }
 
 int
@@ -212,85 +203,9 @@ getMillisFromMillis (int millis)
   return millis % 1000;
 }
 
-int
-countLines (FILE *fp)
-{
-  int count = 0;
-  char *line = NULL;
-  size_t len = 0;
-  ssize_t read;
-
-  while ((read = getline (&line, &len, fp)) != -1)
-    count++;
-
-  free (line);
-  rewind (fp);
-  return count;
-}
-
 void
 getFileName (char filename[20], int cubeSize)
 {
   snprintf (filename, 20, "times/%d.time", cubeSize);
 }
 
-KeyBindings keyBindings;
-
-void
-initDefaultKeyBindings (void)
-{
-  keyBindings.key_R = KEY_R;
-  keyBindings.key_L = KEY_L;
-  keyBindings.key_U = KEY_U;
-  keyBindings.key_D = KEY_D;
-  keyBindings.key_F = KEY_F;
-  keyBindings.key_B = KEY_B;
-  keyBindings.key_M = KEY_M_FR;
-  keyBindings.key_S = KEY_S;
-  keyBindings.key_E = KEY_E;
-  keyBindings.key_X = KEY_X;
-  keyBindings.key_Y = KEY_Y;
-  keyBindings.key_Z = KEY_Z_FR;
-  keyBindings.key_ALT = KEY_LEFT_ALT;
-}
-
-const char *
-getKeyName (int key)
-{
-  switch (key)
-    {
-    case KEY_LEFT_ALT:      return "L-ALT";
-    case KEY_RIGHT_ALT:     return "R-ALT";
-    case KEY_LEFT_SHIFT:    return "L-SHIFT";
-    case KEY_RIGHT_SHIFT:   return "R-SHIFT";
-    case KEY_LEFT_CONTROL:  return "L-CTRL";
-    case KEY_RIGHT_CONTROL: return "R-CTRL";
-    case KEY_SPACE:         return "SPACE";
-    case KEY_ENTER:         return "ENTER";
-    case KEY_TAB:           return "TAB";
-    case KEY_BACKSPACE:     return "BACKSPACE";
-    case KEY_ESCAPE:        return "ESCAPE";
-    }
-
-  static char str[16];
-
-  /* Ask GLFW what character the current keyboard layout assigns to this
-   * physical key. 
-   * Returns NULL for keys with no printable representation. 
-  */
-  const char *name = glfwGetKeyName (key, 0);
-  if (name != NULL && name[0] != '\0')
-    {
-      size_t i = 0;
-      while (name[i] != '\0' && i < sizeof (str) - 1)
-        {
-          str[i] = (i == 0) ? (char)toupper ((unsigned char)name[i]) : name[i];
-          i++;
-        }
-      str[i] = '\0';
-      return str;
-    }
-
-  sprintf (str, "%d", key);
-  return str;
-}

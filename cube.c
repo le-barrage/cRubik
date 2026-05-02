@@ -540,17 +540,17 @@ Cube_getFaceFromColor (cubie_t cubie, Face face)
 {
   Color color = cubie.colors[face];
 
-  if (colorsEqual (color, WHITE))
+  if (colors_equal (color, WHITE))
     return 'U';
-  else if (colorsEqual (color, GREEN))
+  else if (colors_equal (color, GREEN))
     return 'F';
-  else if (colorsEqual (color, RED))
+  else if (colors_equal (color, RED))
     return 'R';
-  else if (colorsEqual (color, BLUE))
+  else if (colors_equal (color, BLUE))
     return 'B';
-  else if (colorsEqual (color, ORANGE))
+  else if (colors_equal (color, ORANGE))
     return 'L';
-  else if (colorsEqual (color, YELLOW))
+  else if (colors_equal (color, YELLOW))
     return 'D';
   else
     return '?';
@@ -631,7 +631,7 @@ findWorldFaceShowing (Cube *cube, Color target)
 {
   Face all[6] = { UP, FRONT, RIGHT, BACK, LEFT, DOWN };
   for (int i = 0; i < 6; i++)
-    if (colorsEqual (worldCenterColor (cube, all[i]), target))
+    if (colors_equal (worldCenterColor (cube, all[i]), target))
       return all[i];
   return UP;
 }

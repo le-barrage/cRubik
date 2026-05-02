@@ -5,6 +5,7 @@
 #include "kociemba/coordCube.h"
 #include "kociemba/enums.h"
 #include "kociemba/twoPhase.h"
+#include "keybindings.h"
 #include "options.h"
 #include "patterns.h"
 #include "queue.h"
@@ -131,7 +132,7 @@ handleRotation (Rotation clockwise, Rotation antiClockwise)
     return;
   currentSolution[0] = '\0';
   currentSolutionSize = 0;
-  if (IsKeyDown (keyBindings.key_ALT))
+  if (IsKeyDown (keybindings.key_ALT))
     queue_push (queue, antiClockwise);
   else
     queue_push (queue, clockwise);
@@ -368,29 +369,29 @@ handleKeyPress ()
       isTimerReady = false;
       return;
     }
-  if (IsKeyPressed (keyBindings.key_U))
+  if (IsKeyPressed (keybindings.key_U))
     handleRotation (U, u);
-  else if (IsKeyPressed (keyBindings.key_D))
+  else if (IsKeyPressed (keybindings.key_D))
     handleRotation (D, d);
-  else if (IsKeyPressed (keyBindings.key_L))
+  else if (IsKeyPressed (keybindings.key_L))
     handleRotation (L, l);
-  else if (IsKeyPressed (keyBindings.key_R))
+  else if (IsKeyPressed (keybindings.key_R))
     handleRotation (R, r);
-  else if (IsKeyPressed (keyBindings.key_F))
+  else if (IsKeyPressed (keybindings.key_F))
     handleRotation (F, f);
-  else if (IsKeyPressed (keyBindings.key_B))
+  else if (IsKeyPressed (keybindings.key_B))
     handleRotation (B, b);
-  else if (IsKeyPressed (keyBindings.key_M))
+  else if (IsKeyPressed (keybindings.key_M))
     handleRotation (M, m);
-  else if (IsKeyPressed (keyBindings.key_E))
+  else if (IsKeyPressed (keybindings.key_E))
     handleRotation (E, e);
-  else if (IsKeyPressed (keyBindings.key_S))
+  else if (IsKeyPressed (keybindings.key_S))
     handleRotation (S, s);
-  else if (IsKeyPressed (keyBindings.key_X))
+  else if (IsKeyPressed (keybindings.key_X))
     handleRotation (X, x);
-  else if (IsKeyPressed (keyBindings.key_Y))
+  else if (IsKeyPressed (keybindings.key_Y))
     handleRotation (Y, y);
-  else if (IsKeyPressed (keyBindings.key_Z))
+  else if (IsKeyPressed (keybindings.key_Z))
     handleRotation (Z, z);
   else if (IsKeyPressed (KEY_ENTER))
     generateNewScramble ();
@@ -925,7 +926,7 @@ initEverything (void *arg)
   if (initK)
     init ();
 
-  initDefaultKeyBindings ();
+  keybindings_init ();
   Options_load ();
   initCameraSettings ();
   queue = queue_create ();

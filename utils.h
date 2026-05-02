@@ -2,57 +2,24 @@
 #define UTILS_H
 
 #include "include/raylib.h"
-#include <stdio.h>
-
-#define KEY_M_FR 59
-#define KEY_A_FR 81
-#define KEY_Q_FR 65
-#define KEY_Z_FR 87
-#define KEY_W_FR 90
 
 #define ARRAY_LEN(array) (sizeof (array) / sizeof (array[0]))
 
 #define DEFAULT_FONT_SIZE 20
 
-typedef struct {
-  int key_R;
-  int key_L;
-  int key_U;
-  int key_D;
-  int key_F;
-  int key_B;
-  int key_M;
-  int key_S;
-  int key_E;
-  int key_X;
-  int key_Y;
-  int key_Z;
-  int key_ALT;
-} KeyBindings;
+bool colors_equal (Color a, Color b);
 
-extern KeyBindings keyBindings;
+int Cnk (int n, int k);
 
-const char *getKeyName(int key);
-void initDefaultKeyBindings(void);
-
-bool colorsEqual(Color color1, Color color2);
-
-int Cnk(int n, int k);
-
+/* Solve-time helpers. Planned to migrate to average.{c,h} in a follow-up
+ * batch, they all operate on the same JSON solve files that average.c
+ * already manipulates. */
 void storeTime (char *time, char *scramble, int size);
+int timeToSeconds (char time[10]);
+int timeToMillis (char time[10]);
+int getMinutesFromMillis (int millis);
+int getSecondsFromMillis (int millis);
+int getMillisFromMillis (int millis);
+void getFileName (char filename[20], int cubeSize);
 
-int timeToSeconds(char time[10]);
-
-int timeToMillis(char time[10]);
-
-int getMinutesFromMillis(int millis);
-
-int getSecondsFromMillis(int millis);
-
-int getMillisFromMillis(int millis);
-
-int countLines(FILE *fp);
-
-void getFileName(char filename[20], int cubeSize);
-
-#endif // !UTILS_H
+#endif // UTILS_H
