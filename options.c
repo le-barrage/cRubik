@@ -1,9 +1,15 @@
 #include "options.h"
 #include "cube.h"
+#include "include/cJSON.h"
 #include "include/raygui.h"
 #include "include/raylib.h"
 #include "utils.h"
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define OPTIONS_FILE "options.json"
+#define OPTIONS_VERSION 1
 
 #define BACKGROUND_COLOR GRAY
 
@@ -20,36 +26,26 @@ typedef struct
   int *keyPtr;
 } KeyBindingEntry;
 
-static KeyBindingEntry keyBindingEntries[13];
-
-static void
-initKeyBindingEntries (void)
-{
-  keyBindingEntries[0]  = (KeyBindingEntry){ "R",   &keyBindings.key_R };
-  keyBindingEntries[1]  = (KeyBindingEntry){ "L",   &keyBindings.key_L };
-  keyBindingEntries[2]  = (KeyBindingEntry){ "U",   &keyBindings.key_U };
-  keyBindingEntries[3]  = (KeyBindingEntry){ "D",   &keyBindings.key_D };
-  keyBindingEntries[4]  = (KeyBindingEntry){ "F",   &keyBindings.key_F };
-  keyBindingEntries[5]  = (KeyBindingEntry){ "B",   &keyBindings.key_B };
-  keyBindingEntries[6]  = (KeyBindingEntry){ "M",   &keyBindings.key_M };
-  keyBindingEntries[7]  = (KeyBindingEntry){ "S",   &keyBindings.key_S };
-  keyBindingEntries[8]  = (KeyBindingEntry){ "E",   &keyBindings.key_E };
-  keyBindingEntries[9]  = (KeyBindingEntry){ "X",   &keyBindings.key_X };
-  keyBindingEntries[10] = (KeyBindingEntry){ "Y",   &keyBindings.key_Y };
-  keyBindingEntries[11] = (KeyBindingEntry){ "Z",   &keyBindings.key_Z };
-  keyBindingEntries[12] = (KeyBindingEntry){ "CCW", &keyBindings.key_ALT };
-}
+static const KeyBindingEntry keyBindingEntries[] = {
+  { "R",   &keyBindings.key_R   },
+  { "L",   &keyBindings.key_L   },
+  { "U",   &keyBindings.key_U   },
+  { "D",   &keyBindings.key_D   },
+  { "F",   &keyBindings.key_F   },
+  { "B",   &keyBindings.key_B   },
+  { "M",   &keyBindings.key_M   },
+  { "S",   &keyBindings.key_S   },
+  { "E",   &keyBindings.key_E   },
+  { "X",   &keyBindings.key_X   },
+  { "Y",   &keyBindings.key_Y   },
+  { "Z",   &keyBindings.key_Z   },
+  { "CCW", &keyBindings.key_ALT },
+};
+#define KEY_BINDING_COUNT ARRAY_LEN (keyBindingEntries)
 
 static bool
 drawKeyBindingsUI (int startY)
 {
-  static bool initialized = false;
-  if (!initialized)
-    {
-      initKeyBindingEntries ();
-      initialized = true;
-    }
-
   int buttonWidth = 120;
   int buttonHeight = 35;
   int labelWidth = 50;
@@ -67,7 +63,7 @@ drawKeyBindingsUI (int startY)
 
   bool isHoveringButton = false;
 
-  for (int i = 0; i < 13; i++)
+  for (int i = 0; i < (int)KEY_BINDING_COUNT; i++)
     {
       int row = i / columns;
       int col = i % columns;
@@ -226,4 +222,120 @@ Options_drawScreen (void)
 
   SetMouseCursor (hovering ? MOUSE_CURSOR_POINTING_HAND
                            : MOUSE_CURSOR_DEFAULT);
+}
+
+void
+Options_load (void)
+{
+  FILE *f = fopen (OPTIONS_FILE, "rb");
+  if (!f)
+    return;
+
+  fseek (f, 0, SEEK_END);
+  long len = ftell (f);
+  fseek (f, 0, SEEK_SET);
+  if (len <= 0)
+    {
+      fclose (f);
+      return;
+    }
+
+  char *buf = malloc (len + 1);
+  if (!buf)
+    {
+      fclose (f);
+      return;
+    }
+  fread (buf, 1, len, f);
+  buf[len] = '\0';
+  fclose (f);
+
+  cJSON *root = cJSON_Parse (buf);
+  free (buf);
+  if (!root)
+    {
+      fprintf (stderr, "%s: parse error, keeping defaults\n", OPTIONS_FILE);
+      return;
+    }
+
+  cJSON *version = cJSON_GetObjectItemCaseSensitive (root, "version");
+  if (!cJSON_IsNumber (version) || version->valueint != OPTIONS_VERSION)
+    {
+      fprintf (stderr, "%s: unsupported version, keeping defaults\n",
+               OPTIONS_FILE);
+      cJSON_Delete (root);
+      return;
+    }
+
+  cJSON *rs = cJSON_GetObjectItemCaseSensitive (root, "rotationSpeed");
+  if (cJSON_IsNumber (rs))
+    ROTATIONSPEED = rs->valueint;
+
+  cJSON *som = cJSON_GetObjectItemCaseSensitive (root, "solverOutputMode");
+  if (cJSON_IsString (som) && som->valuestring)
+    {
+      if (strcmp (som->valuestring, "preserve") == 0)
+        solverOutputMode = SOLVER_PRESERVE;
+      else if (strcmp (som->valuestring, "reorient") == 0)
+        solverOutputMode = SOLVER_REORIENT;
+    }
+
+  cJSON *kb = cJSON_GetObjectItemCaseSensitive (root, "keyBindings");
+  if (cJSON_IsObject (kb))
+    {
+      for (size_t i = 0; i < KEY_BINDING_COUNT; i++)
+        {
+          cJSON *item = cJSON_GetObjectItemCaseSensitive (
+              kb, keyBindingEntries[i].name);
+          if (cJSON_IsNumber (item))
+            *keyBindingEntries[i].keyPtr = item->valueint;
+        }
+    }
+
+  cJSON_Delete (root);
+}
+
+void
+Options_save (void)
+{
+  cJSON *root = cJSON_CreateObject ();
+  if (!root)
+    return;
+
+  cJSON_AddNumberToObject (root, "version", OPTIONS_VERSION);
+  cJSON_AddNumberToObject (root, "rotationSpeed", ROTATIONSPEED);
+  cJSON_AddStringToObject (root, "solverOutputMode",
+                           solverOutputMode == SOLVER_PRESERVE ? "preserve"
+                                                               : "reorient");
+
+  cJSON *kb = cJSON_AddObjectToObject (root, "keyBindings");
+  if (kb)
+    {
+      for (size_t i = 0; i < KEY_BINDING_COUNT; i++)
+        cJSON_AddNumberToObject (kb, keyBindingEntries[i].name,
+                                 *keyBindingEntries[i].keyPtr);
+    }
+
+  char *out = cJSON_Print (root);
+  cJSON_Delete (root);
+  if (!out)
+    return;
+
+  const char *tmpPath = OPTIONS_FILE ".tmp";
+  FILE *f = fopen (tmpPath, "wb");
+  if (!f)
+    {
+      perror ("fopen options.json.tmp");
+      free (out);
+      return;
+    }
+  fputs (out, f);
+  fclose (f);
+  free (out);
+
+  if (rename (tmpPath, OPTIONS_FILE) != 0)
+    {
+      perror ("rename options.json");
+      remove (tmpPath);
+    }
 }

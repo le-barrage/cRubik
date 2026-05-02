@@ -714,6 +714,7 @@ initEverything (void *arg)
     init ();
 
   initDefaultKeyBindings ();
+  Options_load ();
   initCameraSettings ();
   queue = Queue_make ();
 
@@ -743,7 +744,11 @@ UpdateDrawFrame ()
   if (IsKeyPressed (KEY_H) && !showOptions && !showPatterns)
     showHelp = !showHelp;
   else if (IsKeyPressed (KEY_O) && !showHelp && !showPatterns)
+    {
     showOptions = !showOptions;
+      if (!showOptions)
+        Options_save ();
+    }
   else if (IsKeyPressed (KEY_P) && !showOptions && !showHelp)
     showPatterns = !showPatterns;
 
@@ -824,6 +829,8 @@ main (int argc, char **argv)
         break;
     }
 #endif
+
+  Options_save ();
 
   free (currentScramble);
   free (scramble);
