@@ -113,7 +113,7 @@ char *helpTexts[] = {
 int helpTextsSize = ARRAY_LEN (helpTexts);
 int helpTextsMaxLength;
 
-Timer timer;
+stopwatch_t timer;
 Color timerColor = BLACK;
 char timerString[10] = "00:00.000";
 bool isTimerReady = false;
@@ -258,7 +258,7 @@ generateNewScramble ()
   cube = Cube_make (CUBIE_SIZE);
   generateScramble (scramble, SIZE);
   applyMovesAndUpdateCurrentScramble ();
-  timer.isDisabled = false;
+  timer.is_disabled = false;
 }
 
 void
@@ -303,7 +303,7 @@ resizeCube (int increment)
 void
 applyCurrentSolution ()
 {
-  Timer_disable (&timer);
+  timer_disable (&timer);
   isSolutionRunning = true;
   currentSolutionSize = 0;
 
@@ -349,15 +349,15 @@ updateTimerString ()
 void
 handleKeyPress ()
 {
-  if (GetKeyPressed () && timer.isRunning)
+  if (GetKeyPressed () && timer.is_running)
     {
-      Timer_stop (&timer);
+      timer_stop (&timer);
       updateTimerString ();
       storeTime (timerString, currentScramble, SIZE);
       getLast5Solves (times, SIZE);
       getAverageOf5 (times, avg);
       generateNewScramble ();
-      timer.justStopped = false;
+      timer.just_stopped = false;
       isTimerReady = false;
       return;
     }
@@ -401,7 +401,7 @@ handleKeyPress ()
         }
       pthread_detach (solutionThread);
     }
-  else if (IsKeyDown (KEY_SPACE) && !timer.isDisabled)
+  else if (IsKeyDown (KEY_SPACE) && !timer.is_disabled)
     {
       if (!isTimerReady)
         {
@@ -420,18 +420,18 @@ handleKeyPress ()
               isTimerReady = elapsed_time_ms > KEEP_SPACE_DOWN_MS;
             }
         }
-      else if (!timer.isRunning && !timer.justStopped)
+      else if (!timer.is_running && !timer.just_stopped)
         timerColor = (Color){ 0, 204, 51, 255 };
-      else if (!timer.justStopped)
+      else if (!timer.just_stopped)
         {
-          Timer_stop (&timer);
+          timer_stop (&timer);
         }
     }
-  else if (IsKeyReleased (KEY_SPACE) && !timer.isDisabled)
+  else if (IsKeyReleased (KEY_SPACE) && !timer.is_disabled)
     {
       timerColor = BLACK;
-      if (!timer.isRunning && isTimerReady)
-        Timer_start (&timer);
+      if (!timer.is_running && isTimerReady)
+        timer_start (&timer);
       keySpaceDownStart.tv_nsec = -1;
     }
   else if (IsKeyPressed (KEY_KP_ADD) || IsKeyPressed (KEY_PAGE_UP))
@@ -452,7 +452,7 @@ handleQueue ()
       if (isSolutionRunning)
         {
           isSolutionRunning = false;
-          timer.isDisabled = false;
+          timer.is_disabled = false;
         }
       if (playback.active)
         {
@@ -787,7 +787,7 @@ drawCubeScreen ()
             10, 30, BLACK);
   DrawMoves (currentScramble, DEFAULT_FONT_SIZE, 50, -1);
 
-  Timer_update (&timer);
+  timer_update (&timer);
   updateTimerString ();
   DrawText (timerString,
             GetScreenWidth () / 2 - MeasureText ("00:00.00", 40) / 2,
@@ -928,7 +928,6 @@ initEverything (void *arg)
       exit (1);
     }
 
-  timer = Timer_make ();
   getLast5Solves (times, SIZE);
 
   initCurrentScrambleAndSolution ();
