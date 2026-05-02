@@ -1,494 +1,475 @@
 #include "average.h"
-#include "utils.h"
+
+#include "include/cJSON.h"
+#include "time_consts.h"
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include "include/cJSON.h"
-
-#define MAX_TIME_LEN 20
-#define MAX_FILENAME_LEN 64
-#define MAX_LINE_LEN 256
-#define NUM_TIMES 5
-#define NUM_VALID_TIMES 3
+#define VALID_TIMES_FOR_AVG 3
+#define FILENAME_MAX_LEN 64
+#define PLUS_TWO_PENALTY_MS 2000
 
 typedef enum
 {
   FIELD_DNF,
-  FIELD_PLUS_TWO
-} FieldType;
+  FIELD_PLUS_TWO,
+} field_type_t;
+
+typedef struct
+{
+  bool valid;
+  bool dnf;
+  int ms;
+  char display[TIME_STR_MAX];
+} solve_entry_t;
+
+static void
+get_solves_filename (char *out, int cube_size)
+{
+  snprintf (out, FILENAME_MAX_LEN, "times/%d.time", cube_size);
+}
+
+/* Parses "MM:SS.mmm" into total milliseconds. Caller is responsible for
+ * passing a 9-character (or longer) string in that format; behavior is
+ * undefined otherwise. */
+static int
+time_to_ms (const char *time)
+{
+  int seconds = 600 * (time[0] - '0') + 60 * (time[1] - '0')
+                + 10 * (time[3] - '0') + (time[4] - '0');
+  return MS_PER_SEC * seconds + 100 * (time[6] - '0')
+         + 10 * (time[7] - '0') + (time[8] - '0');
+}
+
+/* Writes total_ms as "MM:SS.mmm" + null into out. out_size should be at
+ * least AVG_STR_LEN. Values are clamped (minutes <= 99) so a stopwatch
+ * never overflows the format width. */
+static void
+time_format (int total_ms, char *out, size_t out_size)
+{
+  if (total_ms < 0)
+    total_ms = 0;
+  int minutes = total_ms / MS_PER_MIN;
+  if (minutes > 99)
+    minutes = 99;
+  int seconds = (total_ms / MS_PER_SEC) % SECONDS_PER_MIN;
+  int ms = total_ms % MS_PER_SEC;
+  snprintf (out, out_size, "%02d:%02d.%03d", minutes, seconds, ms);
+}
 
 static bool
-timeIsDNF (char time[20])
+time_is_dnf (const char *time)
 {
-  return time[0] == 'D' || time[1] == 'D';
+  if (time[0] == '(')
+    time++;
+  return strncmp (time, "DNF", 3) == 0;
+}
+
+static bool
+is_excluded_from_average (const char *time)
+{
+  return time[0] == '(' || time_is_dnf (time);
 }
 
 static cJSON *
-readJsonFromFile (const char *filename)
+read_json_file (const char *filename)
 {
-  FILE *file = fopen (filename, "r");
-  if (!file)
+  FILE *f = fopen (filename, "rb");
+  if (!f)
+    return NULL;
+
+  fseek (f, 0, SEEK_END);
+  long length = ftell (f);
+  fseek (f, 0, SEEK_SET);
+  if (length <= 0)
     {
-      perror ("Error opening file for reading");
+      fclose (f);
       return NULL;
     }
 
-  fseek (file, 0, SEEK_END);
-  long length = ftell (file);
-  fseek (file, 0, SEEK_SET);
-
-  if (length == 0)
+  char *buf = malloc (length + 1);
+  if (!buf)
     {
-      fprintf (stderr, "File is empty\n");
-      fclose (file);
+      fclose (f);
       return NULL;
     }
+  fread (buf, 1, length, f);
+  buf[length] = '\0';
+  fclose (f);
 
-  char *buffer = malloc (length + 1);
-  if (!buffer)
+  cJSON *json = cJSON_Parse (buf);
+  free (buf);
+  if (!json)
     {
-      fprintf (stderr, "Failed to alloc buffer\n");
-      fclose (file);
-      return NULL;
+      const char *err = cJSON_GetErrorPtr ();
+      if (err)
+        fprintf (stderr, "%s: parse error: %s\n", filename, err);
     }
-
-  fread (buffer, 1, length, file);
-  buffer[length] = '\0';
-  fclose (file);
-
-  cJSON *json = cJSON_Parse (buffer);
-  free (buffer);
-
-  if (json == NULL)
-    {
-      const char *error_ptr = cJSON_GetErrorPtr ();
-      if (error_ptr != NULL)
-        {
-          fprintf (stderr, "Error parsing JSON: %s\n", error_ptr);
-        }
-      return NULL;
-    }
-
   return json;
 }
 
-/* Helper function to write JSON to file */
 static int
-writeJsonToFile (const char *filename, cJSON *json)
+write_json_file (const char *filename, cJSON *json)
 {
-  FILE *file = fopen (filename, "w");
-  if (file == NULL)
+  FILE *f = fopen (filename, "wb");
+  if (!f)
     {
-      perror ("Error opening file for writing");
+      perror (filename);
       return 1;
     }
 
-  char *output = cJSON_Print (json);
-  if (output)
+  char *out = cJSON_Print (json);
+  if (out)
     {
-      fprintf (file, "%s", output);
-      free (output);
+      fputs (out, f);
+      free (out);
     }
-
-  fclose (file);
+  fclose (f);
   return 0;
 }
 
-/* Helper function to calculate target index */
-static int
-getTargetIndex (int index, int total_solves)
+static void
+parse_solve_json (const cJSON *solve, solve_entry_t *out)
 {
-  if (total_solves < NUM_TIMES)
+  *out = (solve_entry_t){ .valid = false, .dnf = false, .ms = -1 };
+
+  const cJSON *time = cJSON_GetObjectItemCaseSensitive (solve, "time");
+  const cJSON *dnf = cJSON_GetObjectItemCaseSensitive (solve, "dnf");
+  const cJSON *plus_two = cJSON_GetObjectItemCaseSensitive (solve, "plus_two");
+
+  if (!cJSON_IsString (time) || !time->valuestring)
+    return;
+  out->valid = true;
+
+  if (cJSON_IsTrue (dnf))
     {
-      return index;
+      strcpy (out->display, "DNF");
+      out->dnf = true;
+      return;
     }
+
+  out->ms = time_to_ms (time->valuestring);
+  if (cJSON_IsTrue (plus_two))
+    snprintf (out->display, TIME_STR_MAX, "%s+", time->valuestring);
   else
     {
-      return total_solves - NUM_TIMES + index;
+      strncpy (out->display, time->valuestring, TIME_STR_MAX - 1);
+      out->display[TIME_STR_MAX - 1] = '\0';
     }
 }
 
-/* Helper function to initialize times array */
 static void
-initializeTimesArray (char times[5][20])
+wrap_in_parens (char *str)
 {
-  for (int i = 0; i < 5; i++)
-    strcpy (times[i], "-");
+  size_t len = strlen (str);
+  if (len + 3 > TIME_STR_MAX)
+    {
+      fprintf (stderr, "wrap_in_parens: display too long: '%s'\n", str);
+      return;
+    }
+  memmove (str + 1, str, len + 1);
+  str[0] = '(';
+  str[len + 1] = ')';
+  str[len + 2] = '\0';
+}
+
+static void
+mark_best_worst (solve_entry_t entries[LAST_N_SOLVES])
+{
+  int best_idx = -1;
+  int worst_idx = -1;
+  int best_ms = -1;
+  int worst_ms = -1;
+  bool found_dnf = false;
+
+  for (int i = 0; i < LAST_N_SOLVES; i++)
+    {
+      if (!entries[i].valid)
+        return;
+
+      if (entries[i].dnf)
+        {
+          worst_idx = i;
+          found_dnf = true;
+          continue;
+        }
+
+      if (best_idx < 0 || entries[i].ms < best_ms)
+        {
+          best_idx = i;
+          best_ms = entries[i].ms;
+        }
+      if (!found_dnf && (worst_idx < 0 || entries[i].ms >= worst_ms))
+        {
+          worst_idx = i;
+          worst_ms = entries[i].ms;
+        }
+    }
+
+  if (best_idx >= 0)
+    wrap_in_parens (entries[best_idx].display);
+  if (worst_idx >= 0 && worst_idx != best_idx)
+    wrap_in_parens (entries[worst_idx].display);
+}
+
+static int
+add_solve_entry (cJSON *root, const char *time, const char *scramble)
+{
+  cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
+  if (!cJSON_IsArray (solves))
+    return 1;
+
+  cJSON *solve = cJSON_CreateObject ();
+  if (!solve)
+    return 1;
+
+  if (!cJSON_AddStringToObject (solve, "time", time)
+      || !cJSON_AddStringToObject (solve, "scramble", scramble)
+      || !cJSON_AddBoolToObject (solve, "dnf", 0)
+      || !cJSON_AddBoolToObject (solve, "plus_two", 0))
+    {
+      cJSON_Delete (solve);
+      return 1;
+    }
+
+  cJSON_AddItemToArray (solves, solve);
+  return 0;
+}
+
+static cJSON *
+new_solves_root (int cube_size)
+{
+  cJSON *root = cJSON_CreateObject ();
+  if (!root)
+    return NULL;
+  char puzzle_name[20];
+  snprintf (puzzle_name, sizeof puzzle_name, "%dx%dx%d", cube_size, cube_size,
+            cube_size);
+  cJSON_AddStringToObject (root, "puzzle", puzzle_name);
+  cJSON_AddArrayToObject (root, "solves");
+  return root;
 }
 
 void
-getLast5Solves (char times[5][20], int cubeSize)
+solves_save (const char *time, const char *scramble, int cube_size)
 {
-  char filename[MAX_FILENAME_LEN];
-  getFileName (filename, cubeSize);
-  FILE *f = fopen (filename, "a+");
-  if (f == NULL)
+  char filename[FILENAME_MAX_LEN];
+  get_solves_filename (filename, cube_size);
+
+  cJSON *root = read_json_file (filename);
+  if (!root)
     {
-      perror ("fopen in average.c");
-      exit (1);
-    }
-
-  char *buffer = NULL;
-  long length;
-  cJSON *json = NULL;
-
-  fseek (f, 0, SEEK_END);
-  length = ftell (f);
-  fseek (f, 0, SEEK_SET);
-  if (length == 0)
-    {
-      initializeTimesArray (times);
-      fclose (f);
-      return;
-    }
-
-  buffer = malloc (length + 1);
-  if (!buffer)
-    {
-      fprintf (stderr, "Failed to alloc buffer\n");
-      fclose (f);
-      exit (1);
-    }
-
-  fread (buffer, 1, length, f);
-  buffer[length] = '\0';
-  fclose (f);
-
-  json = cJSON_Parse (buffer);
-  if (json == NULL)
-    {
-      const char *error_ptr = cJSON_GetErrorPtr ();
-      if (error_ptr != NULL)
+      FILE *probe = fopen (filename, "rb");
+      if (probe)
         {
-          fprintf (stderr, "Error before: %s\n", error_ptr);
-        }
-      free (buffer);
-      initializeTimesArray (times);
-      return;
-    }
-
-  free (buffer);
-
-  cJSON *solves = cJSON_GetObjectItemCaseSensitive (json, "solves");
-  if (solves == NULL || !cJSON_IsArray (solves))
-    {
-      fprintf (stderr, "No 'solves' array found\n");
-      cJSON_Delete (json);
-      initializeTimesArray (times);
-      return;
-    }
-
-  int total_solves = cJSON_GetArraySize (solves);
-  int num_to_get = total_solves < 5 ? total_solves : 5;
-  int start_index = total_solves - num_to_get;
-
-  char raw_times[5][20];
-  int best_index = -1;
-  int worst_index = -1;
-  double best_time = -1;
-  double worst_time = -1;
-  bool foundDNF = false;
-
-  for (int i = 0; i < 5; i++)
-    {
-      strcpy (times[i], "-");
-      strcpy (raw_times[i], "-");
-
-      if (i >= num_to_get)
-        continue;
-
-      cJSON *solve = cJSON_GetArrayItem (solves, start_index + i);
-      if (solve == NULL)
-        continue;
-
-      const cJSON *time = cJSON_GetObjectItemCaseSensitive (solve, "time");
-      const cJSON *dnf = cJSON_GetObjectItemCaseSensitive (solve, "dnf");
-      const cJSON *plus_two
-          = cJSON_GetObjectItemCaseSensitive (solve, "plus_two");
-
-      if (!cJSON_IsString (time) || time->valuestring == NULL)
-        continue;
-
-      strcpy (raw_times[i], time->valuestring);
-
-      if (cJSON_IsTrue (dnf))
-        {
-          strcpy (times[i], "DNF");
-          foundDNF = true;
-          // DNF is always worst
-          if (worst_time < 0)
-            {
-              worst_index = i;
-              worst_time = -1;
-            }
-          else
-            {
-              worst_index = i; // Always update to later DNF
-            }
-        }
-      else if (cJSON_IsTrue (plus_two))
-        {
-          snprintf (times[i], 20, "%s+", time->valuestring);
-          double t = timeToMillis (time->valuestring);
-
-          if (best_time < 0 || t < best_time)
-            {
-              best_time = t;
-              best_index = i;
-            }
-
-          if (worst_time < 0)
-            {
-              worst_time = t;
-              worst_index = i;
-            }
-          else if (!foundDNF && t >= worst_time)
-            {
-              worst_time = t;
-              worst_index = i;
-            }
-        }
-      else
-        {
-          strcpy (times[i], time->valuestring);
-          double t = timeToMillis (time->valuestring);
-
-          if (best_time < 0 || t < best_time)
-            {
-              best_time = t;
-              best_index = i;
-            }
-
-          if (worst_time < 0)
-            {
-              worst_time = t;
-              worst_index = i;
-            }
-          else if (!foundDNF && t >= worst_time)
-            {
-              worst_time = t;
-              worst_index = i;
-            }
-        }
-    }
-
-  if (num_to_get >= 5 && best_index >= 0
-      && strcmp (times[best_index], "-") != 0
-      && strcmp (times[best_index], "DNF") != 0)
-    {
-      char temp[20];
-      snprintf (temp, 20, "(%s)", times[best_index]);
-      strcpy (times[best_index], temp);
-    }
-
-  if (num_to_get >= 5 && worst_index >= 0 && worst_index != best_index
-      && strcmp (times[worst_index], "-") != 0)
-    {
-      char temp[20];
-      snprintf (temp, 20, "(%s)", times[worst_index]);
-      strcpy (times[worst_index], temp);
-    }
-
-  cJSON_Delete (json);
-}
-
-void
-getAverageOf5 (char times[5][20], char avg[10])
-{
-  int dnfCount = 0;
-  for (int i = 0; i < NUM_TIMES; i++)
-    {
-      if (timeIsDNF (times[i]))
-        dnfCount++;
-      if (dnfCount > 1)
-        {
-          strcpy (avg, "DNF");
+          fclose (probe);
+          fprintf (stderr,
+                   "%s: refusing to overwrite unparseable file\n", filename);
           return;
         }
+
+      root = new_solves_root (cube_size);
+      if (!root)
+        {
+          fprintf (stderr, "%s: out of memory creating solves root\n",
+                   filename);
+          return;
+        }
+    }
+
+  if (add_solve_entry (root, time, scramble) != 0)
+    {
+      fprintf (stderr, "%s: failed to append solve\n", filename);
+      cJSON_Delete (root);
+      return;
+    }
+
+  write_json_file (filename, root);
+  cJSON_Delete (root);
+}
+
+void
+solves_load_last_5 (char times[LAST_N_SOLVES][TIME_STR_MAX], int cube_size)
+{
+  for (int i = 0; i < LAST_N_SOLVES; i++)
+    strcpy (times[i], "-");
+
+  char filename[FILENAME_MAX_LEN];
+  get_solves_filename (filename, cube_size);
+  cJSON *root = read_json_file (filename);
+  if (!root)
+    return;
+
+  cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
+  if (!cJSON_IsArray (solves))
+    {
+      fprintf (stderr, "%s: 'solves' array missing or wrong type\n", filename);
+      cJSON_Delete (root);
+      return;
+    }
+
+  int total = cJSON_GetArraySize (solves);
+  int n = total < LAST_N_SOLVES ? total : LAST_N_SOLVES;
+  int start = total - n;
+
+  solve_entry_t entries[LAST_N_SOLVES] = { 0 };
+  for (int i = 0; i < n; i++)
+    parse_solve_json (cJSON_GetArrayItem (solves, start + i), &entries[i]);
+
+  if (n == LAST_N_SOLVES)
+    mark_best_worst (entries);
+
+  for (int i = 0; i < LAST_N_SOLVES; i++)
+    if (entries[i].valid)
+      strcpy (times[i], entries[i].display);
+
+  cJSON_Delete (root);
+}
+
+void
+solves_average_of_5 (char times[LAST_N_SOLVES][TIME_STR_MAX],
+                     char avg[AVG_STR_LEN])
+{
+  int dnf_count = 0;
+  for (int i = 0; i < LAST_N_SOLVES; i++)
+    {
       if (times[i][0] == '-')
         {
           avg[0] = '-';
           avg[1] = '\0';
           return;
         }
+      if (time_is_dnf (times[i]))
+        dnf_count++;
+    }
+  if (dnf_count > 1)
+    {
+      strcpy (avg, "DNF");
+      return;
     }
 
-  char validTimes[NUM_VALID_TIMES][MAX_TIME_LEN];
-  int x = 0;
-  for (int i = 0; i < NUM_TIMES; i++)
+  int total_ms = 0;
+  int summed = 0;
+  for (int i = 0; i < LAST_N_SOLVES && summed < VALID_TIMES_FOR_AVG; i++)
     {
-      if (times[i][0] == '(' || timeIsDNF (times[i]))
+      if (is_excluded_from_average (times[i]))
         continue;
-      strcpy (validTimes[x++], times[i]);
+      total_ms += time_to_ms (times[i]);
+      summed++;
     }
-  int millisecondsTotal = 0;
-  for (int i = 0; i < NUM_VALID_TIMES; i++)
-    {
-      millisecondsTotal += timeToMillis (validTimes[i]);
-    }
-  millisecondsTotal /= NUM_VALID_TIMES;
-  int minutes = getMinutesFromMillis (millisecondsTotal);
-  int seconds = getSecondsFromMillis (millisecondsTotal);
-  int milliseconds = getMillisFromMillis (millisecondsTotal);
-  snprintf (avg, 10, "%02d:%02d.%03d", minutes, seconds, milliseconds);
+
+  time_format (total_ms / VALID_TIMES_FOR_AVG, avg, AVG_STR_LEN);
 }
 
 static int
-set_dnf (cJSON *solve, int value)
+target_index (int index, int total_solves)
 {
-  if (solve == NULL)
-    {
-      fprintf (stderr, "Invalid solve object\n");
-      return 1;
-    }
+  if (total_solves < LAST_N_SOLVES)
+    return index;
+  return total_solves - LAST_N_SOLVES + index;
+}
 
-  cJSON *dnf = cJSON_GetObjectItemCaseSensitive (solve, "dnf");
-  if (dnf == NULL)
-    {
-      fprintf (stderr, "DNF field not found\n");
-      return 1;
-    }
-
-  if (value)
-    cJSON_ReplaceItemInObject (solve, "dnf", cJSON_CreateTrue ());
-  else
-    cJSON_ReplaceItemInObject (solve, "dnf", cJSON_CreateFalse ());
-
+static int
+set_dnf (cJSON *solve, bool value)
+{
+  cJSON_ReplaceItemInObject (solve, "dnf",
+                             value ? cJSON_CreateTrue () : cJSON_CreateFalse ());
   return 0;
 }
 
 static int
-set_plus_two (cJSON *solve, int value)
+set_plus_two (cJSON *solve, bool value)
 {
-  if (solve == NULL)
-    {
-      fprintf (stderr, "Invalid solve object\n");
-      return 1;
-    }
-
   cJSON *plus_two = cJSON_GetObjectItemCaseSensitive (solve, "plus_two");
-  if (plus_two == NULL)
-    {
-      fprintf (stderr, "plus_two field not found\n");
-      return 1;
-    }
-
   cJSON *time_obj = cJSON_GetObjectItemCaseSensitive (solve, "time");
-  if (!cJSON_IsString (time_obj) || time_obj->valuestring == NULL)
-    {
-      fprintf (stderr, "time field not found or invalid\n");
-      return 1;
-    }
+  if (!cJSON_IsString (time_obj) || !time_obj->valuestring)
+    return 1;
 
-  char *current_time = time_obj->valuestring;
-  int current_plus_two = cJSON_IsTrue (plus_two) ? 1 : 0;
-
-  int timeMs = timeToMillis (current_time);
-
-  if (value && !current_plus_two)
-    timeMs += 2000;
-  else if (!value && current_plus_two)
-    timeMs -= 2000;
-  else
+  bool current = cJSON_IsTrue (plus_two);
+  if (value == current)
     return 0;
 
-  int min = getMinutesFromMillis (timeMs);
-  int sec = getSecondsFromMillis (timeMs);
-  int millis = getMillisFromMillis (timeMs);
+  int ms = time_to_ms (time_obj->valuestring);
+  ms += value ? PLUS_TWO_PENALTY_MS : -PLUS_TWO_PENALTY_MS;
 
-  char new_time[20] = { 0 };
-  snprintf (new_time, 20, "%02d:%02d.%03d", min, sec, millis);
+  char new_time[AVG_STR_LEN];
+  time_format (ms, new_time, AVG_STR_LEN);
 
   cJSON_ReplaceItemInObject (solve, "time", cJSON_CreateString (new_time));
-
-  if (value)
-    cJSON_ReplaceItemInObject (solve, "plus_two", cJSON_CreateTrue ());
-  else
-    cJSON_ReplaceItemInObject (solve, "plus_two", cJSON_CreateFalse ());
-
+  cJSON_ReplaceItemInObject (solve, "plus_two",
+                             value ? cJSON_CreateTrue () : cJSON_CreateFalse ());
   return 0;
 }
 
-/* Generic function to modify a field in a solve */
 static void
-modifySolveField (int index, int cubeSize, FieldType field_type)
+modify_solve_field (int index, int cube_size, field_type_t field)
 {
-  if (index < 0 || index >= NUM_TIMES)
+  if (index < 0 || index >= LAST_N_SOLVES)
     {
-      fprintf (stderr, "Error: index %d out of range [0..%d]\n", index,
-               NUM_TIMES - 1);
+      fprintf (stderr, "modify_solve_field: index %d out of range\n", index);
       return;
     }
 
-  char filename[MAX_FILENAME_LEN];
-  getFileName (filename, cubeSize);
+  char filename[FILENAME_MAX_LEN];
+  get_solves_filename (filename, cube_size);
+  cJSON *root = read_json_file (filename);
+  if (!root)
+    return;
 
-  cJSON *json = readJsonFromFile (filename);
-  if (json == NULL)
+  cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
+  if (!cJSON_IsArray (solves))
     {
+      fprintf (stderr, "%s: 'solves' array missing or wrong type\n", filename);
+      cJSON_Delete (root);
       return;
     }
 
-  cJSON *solves = cJSON_GetObjectItemCaseSensitive (json, "solves");
-  if (solves == NULL || !cJSON_IsArray (solves))
+  int total = cJSON_GetArraySize (solves);
+  int idx = target_index (index, total);
+  if (idx < 0 || idx >= total)
     {
-      fprintf (stderr, "No 'solves' array found\n");
-      cJSON_Delete (json);
+      fprintf (stderr, "%s: solve index %d out of range (total %d)\n",
+               filename, idx, total);
+      cJSON_Delete (root);
       return;
     }
 
-  int total_solves = cJSON_GetArraySize (solves);
-  int target_index = getTargetIndex (index, total_solves);
-
-  if (target_index < 0 || target_index >= total_solves)
+  cJSON *solve = cJSON_GetArrayItem (solves, idx);
+  if (!solve)
     {
-      fprintf (stderr, "Target index %d out of range\n", target_index);
-      cJSON_Delete (json);
-      return;
-    }
-
-  cJSON *solve = cJSON_GetArrayItem (solves, target_index);
-  if (solve == NULL)
-    {
-      fprintf (stderr, "Could not get solve at index %d\n", target_index);
-      cJSON_Delete (json);
+      fprintf (stderr, "%s: solve at index %d is null\n", filename, idx);
+      cJSON_Delete (root);
       return;
     }
 
   int status = 0;
-  if (field_type == FIELD_DNF)
+  if (field == FIELD_DNF)
     {
       const cJSON *dnf = cJSON_GetObjectItemCaseSensitive (solve, "dnf");
       status = set_dnf (solve, !cJSON_IsTrue (dnf));
     }
-  else if (field_type == FIELD_PLUS_TWO)
+  else
     {
       const cJSON *plus_two
           = cJSON_GetObjectItemCaseSensitive (solve, "plus_two");
       status = set_plus_two (solve, !cJSON_IsTrue (plus_two));
     }
 
-  if (status != 0)
-    {
-      fprintf (stderr, "Failed to set field\n");
-      cJSON_Delete (json);
-      return;
-    }
-
-  writeJsonToFile (filename, json);
-  cJSON_Delete (json);
+  if (status == 0)
+    write_json_file (filename, root);
+  cJSON_Delete (root);
 }
 
 void
-setDNF (int index, int cubeSize)
+solves_toggle_dnf (int index, int cube_size)
 {
-  modifySolveField (index, cubeSize, FIELD_DNF);
+  modify_solve_field (index, cube_size, FIELD_DNF);
 }
 
 void
-setPlusTwo (int index, int cubeSize)
+solves_toggle_plus_two (int index, int cube_size)
 {
-  modifySolveField (index, cubeSize, FIELD_PLUS_TWO);
+  modify_solve_field (index, cube_size, FIELD_PLUS_TWO);
 }

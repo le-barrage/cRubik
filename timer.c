@@ -1,9 +1,5 @@
 #include "timer.h"
-
-#define NS_PER_MS 1000000LL
-#define MS_PER_SEC 1000
-#define SECONDS_PER_MINUTE 60
-#define MS_PER_MIN (MS_PER_SEC * SECONDS_PER_MINUTE)
+#include "time_consts.h"
 
 void
 timer_start (stopwatch_t *timer)
@@ -26,7 +22,7 @@ timer_update (stopwatch_t *timer)
         + (now.tv_nsec - timer->start_time.tv_nsec) / NS_PER_MS;
 
   timer->minutes = (int)(elapsed_ms / MS_PER_MIN);
-  timer->seconds = (int)((elapsed_ms / MS_PER_SEC) % SECONDS_PER_MINUTE);
+  timer->seconds = (int)((elapsed_ms / MS_PER_SEC) % SECONDS_PER_MIN);
   timer->milliseconds = (int)(elapsed_ms % MS_PER_SEC);
 }
 

@@ -43,7 +43,7 @@ Camera camera = { { 0 }, { 0, 0, 0 }, { 0, 1, 0 }, 90, CAMERA_PERSPECTIVE };
 
 Cube cube;
 char **scramble, *currentScramble, currentSolution[100], solutionFoundText[45],
-    times[5][20], avg[10];
+    times[LAST_N_SOLVES][TIME_STR_MAX], avg[AVG_STR_LEN];
 int currentSolutionSize;
 queue_t *queue;
 bool isSolutionRunning = false, isThreadLaunched = false;
@@ -304,7 +304,7 @@ resizeCube (int increment)
 
   initCameraSettings ();
 
-  getLast5Solves (times, SIZE);
+  solves_load_last_5 (times, SIZE);
 }
 
 // TODO: Make this function more readable (change if)
@@ -361,9 +361,9 @@ handleKeyPress ()
     {
       timer_stop (&timer);
       updateTimerString ();
-      storeTime (timerString, currentScramble, SIZE);
-      getLast5Solves (times, SIZE);
-      getAverageOf5 (times, avg);
+      solves_save (timerString, currentScramble, SIZE);
+      solves_load_last_5 (times, SIZE);
+      solves_average_of_5 (times, avg);
       generateNewScramble ();
       timer.just_stopped = false;
       isTimerReady = false;
@@ -846,16 +846,16 @@ drawCubeScreen ()
         show = !show;
       else if (result == 2)
         {
-          setPlusTwo (timeToShow, SIZE);
-          getLast5Solves (times, SIZE);
-          getAverageOf5 (times, avg);
+          solves_toggle_plus_two (timeToShow, SIZE);
+          solves_load_last_5 (times, SIZE);
+          solves_average_of_5 (times, avg);
           show = !show;
         }
       else if (result == 3)
         {
-          setDNF (timeToShow, SIZE);
-          getLast5Solves (times, SIZE);
-          getAverageOf5 (times, avg);
+          solves_toggle_dnf (timeToShow, SIZE);
+          solves_load_last_5 (times, SIZE);
+          solves_average_of_5 (times, avg);
           show = !show;
         }
     }
@@ -936,7 +936,7 @@ initEverything (void *arg)
       exit (1);
     }
 
-  getLast5Solves (times, SIZE);
+  solves_load_last_5 (times, SIZE);
 
   initCurrentScrambleAndSolution ();
 
@@ -950,7 +950,7 @@ initEverything (void *arg)
 
   isEverythingLoaded = true;
 
-  getAverageOf5 (times, avg);
+  solves_average_of_5 (times, avg);
 
   return NULL;
 }
