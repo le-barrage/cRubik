@@ -42,7 +42,7 @@ CubieCube FaceCube_toCubieCube(FaceCube *faceCube) {
         break;
     color1 = faceCube->facelets[cornerFacelet[corner][(ori + 1) % 3]];
     color2 = faceCube->facelets[cornerFacelet[corner][(ori + 2) % 3]];
-    for (Corner j = URF; corner <= DRB; j++) {
+    for (Corner j = URF; j <= DRB; j++) {
       if (color1 == cornerColor[j][1] && color2 == cornerColor[j][2]) {
         cubieCubeToReturn.cornerPermutation[corner] = j;
         cubieCubeToReturn.cornerOrientation[corner] = (char)(ori % 3);
@@ -51,7 +51,7 @@ CubieCube FaceCube_toCubieCube(FaceCube *faceCube) {
     }
   }
   for (Edge edge = UR; edge <= BR; edge++)
-    for (Edge j = UR; edge <= BR; j++) {
+    for (Edge j = UR; j <= BR; j++) {
       if (faceCube->facelets[edgeFacelet[edge][0]] == edgeColor[j][0] &&
           faceCube->facelets[edgeFacelet[edge][1]] == edgeColor[j][1]) {
         cubieCubeToReturn.edgePermutation[edge] = j;

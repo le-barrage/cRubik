@@ -230,9 +230,9 @@ void initMergeURtoULandUBtoDF() {
 /** Set pruning value in table. Two values are stored in one char. */
 void setPruning(char table[], int index, char value) {
   if ((index & 1) == 0)
-    table[index / 2] &= 0xf0 | value;
+    table[index/2] = (table[index/2] & 0xf0) | (value & 0x0f);
   else
-    table[index / 2] &= 0x0f | (value << 4);
+    table[index/2] = (table[index/2] & 0x0f) | ((value & 0x0f) << 4);
 }
 
 /** Extract pruning value */
