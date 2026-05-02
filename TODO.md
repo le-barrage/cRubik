@@ -15,3 +15,5 @@
 - change font
 
 - HUGE refactoring
+
+- WCA-compliant random-state scrambles like [TNoodle](https://github.com/thewca/tnoodle) (current generator is random-move only)

@@ -140,7 +140,8 @@ handleRotation (Rotation clockwise, Rotation antiClockwise)
 void
 applyMovesAndUpdateCurrentScramble ()
 {
-  for (int i = 0; i < SCRAMBLE_SIZE; i++)
+  int length = scramble_length (SIZE);
+  for (int i = 0; i < length; i++)
     {
       Cube_applyMove (&cube, scramble[i]);
       if (scramble[i][0] == '1' && scramble[i][1] == 'w')
@@ -148,7 +149,7 @@ applyMovesAndUpdateCurrentScramble ()
       else
         strcat (currentScramble, scramble[i]);
       free (scramble[i]);
-      if (i != SCRAMBLE_SIZE - 1)
+      if (i != length - 1)
         strcat (currentScramble, " ");
     }
 }
@@ -256,7 +257,12 @@ generateNewScramble ()
   resetAnimationAndSolution ();
   Cube_free (cube);
   cube = Cube_make (CUBIE_SIZE);
-  generateScramble (scramble, SIZE);
+  if (scramble_generate (scramble, scramble_length (SIZE), SIZE)
+      != SCRAMBLE_OK)
+    {
+      fprintf (stderr, "scramble_generate failed\n");
+      return;
+    }
   applyMovesAndUpdateCurrentScramble ();
   timer.is_disabled = false;
 }
@@ -274,8 +280,9 @@ void
 initCurrentScrambleAndSolution ()
 {
   cube = Cube_make (CUBIE_SIZE);
-  scramble = malloc (SCRAMBLE_SIZE * sizeof (char *));
-  currentScramble = malloc ((6 * SCRAMBLE_SIZE + 1) * sizeof (char));
+  int length = scramble_length (SIZE);
+  scramble = malloc (length * sizeof (char *));
+  currentScramble = malloc ((6 * length + 1) * sizeof (char));
   clearCurrentScrambleAndSolution ();
   resetAnimationAndSolution ();
   avg[0] = '\0';
