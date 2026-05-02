@@ -96,7 +96,7 @@ drawKeyBindingsUI (int startY)
 
       const char *keyText
           = isEditing ? "Press key..."
-                      : key_name (*keyBindingEntries[i].keyPtr);
+                      : keybindings_label (*keyBindingEntries[i].keyPtr);
 
       int textW = MeasureText (keyText, DEFAULT_FONT_SIZE);
       DrawText (keyText, button.x + (button.width - textW) / 2,

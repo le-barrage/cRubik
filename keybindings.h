@@ -34,6 +34,6 @@ void keybindings_init (void);
 /* Returns a layout-aware display label for a physical keycode (e.g., "Z"
  * on AZERTY for the W-position key). The returned pointer points into a
  * shared static buffer: do not free, and the value may be overwritten. */
-const char *key_name (int key);
+const char *keybindings_label (int key);
 
 #endif // KEYBINDINGS_H

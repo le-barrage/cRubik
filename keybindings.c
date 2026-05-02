@@ -3,7 +3,6 @@
 #include "include/raylib.h"
 #include <ctype.h>
 #include <stdio.h>
-#include <string.h>
 
 /* GLFW is statically linked into libraylib.a: forward-declare the one symbol
  * we need rather than depending on the GLFW header. glfwGetKeyName returns
@@ -32,7 +31,7 @@ keybindings_init (void)
 }
 
 const char *
-key_name (int key)
+keybindings_label (int key)
 {
   switch (key)
     {
@@ -64,6 +63,6 @@ key_name (int key)
       return str;
     }
 
-  sprintf (str, "%d", key);
+  snprintf (str, sizeof str, "%d", key);
   return str;
 }
