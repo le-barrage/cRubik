@@ -1,8 +1,16 @@
 #include "utils.h"
 #include "include/cJSON.h"
+#include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+/* GLFW is statically linked into libraylib.a; forward-declare the one symbol
+ * we need rather than depending on the GLFW header. glfwGetKeyName returns
+ * the 'layout-aware' character that a physical key produces under the current
+ * OS keyboard layout (e.g., the W-position key returns "z" on AZERTY). 
+*/
+extern const char *glfwGetKeyName (int key, int scancode);
 
 bool
 colorsEqual (Color color1, Color color2)
@@ -251,79 +259,38 @@ getKeyName (int key)
 {
   switch (key)
     {
-    // case KEY_A:
-    //   return "A";
-    // case KEY_B:
-    //   return "B";
-    // case KEY_C:
-    //   return "C";
-    // case KEY_D:
-    //   return "D";
-    // case KEY_E:
-    //   return "E";
-    // case KEY_F:
-    //   return "F";
-    // case KEY_G:
-    //   return "G";
-    // case KEY_H:
-    //   return "H";
-    // case KEY_I:
-    //   return "I";
-    // case KEY_J:
-    //   return "J";
-    // case KEY_K:
-    //   return "K";
-    // case KEY_L:
-    //   return "L";
-    // case KEY_M:
-    //   return "M";
-    // case KEY_N:
-    //   return "N";
-    // case KEY_O:
-    //   return "O";
-    // case KEY_P:
-    //   return "P";
-    // case KEY_Q:
-    //   return "Q";
-    // case KEY_R:
-    //   return "R";
-    // case KEY_S:
-    //   return "S";
-    // case KEY_T:
-    //   return "T";
-    // case KEY_U:
-    //   return "U";
-    // case KEY_V:
-    //   return "V";
-    // case KEY_W:
-    //   return "W";
-    // case KEY_X:
-    //   return "X";
-    // case KEY_Y:
-    //   return "Y";
-    // case KEY_Z:
-    //   return "Z";
-    case KEY_LEFT_ALT:
-      return "L-ALT";
-    case KEY_RIGHT_ALT:
-      return "R-ALT";
-    case KEY_LEFT_SHIFT:
-      return "L-SHIFT";
-    case KEY_RIGHT_SHIFT:
-      return "R-SHIFT";
-    case KEY_LEFT_CONTROL:
-      return "L-CTRL";
-    case KEY_RIGHT_CONTROL:
-      return "R-CTRL";
-    case KEY_SPACE:
-      return "SPACE";
-    default:
-      {
-        static char str[10];
-        // str[0] = (char)key;
-        // str[1] = '\0';
-        sprintf (str, "%d", key);
-        return str;
-      }
+    case KEY_LEFT_ALT:      return "L-ALT";
+    case KEY_RIGHT_ALT:     return "R-ALT";
+    case KEY_LEFT_SHIFT:    return "L-SHIFT";
+    case KEY_RIGHT_SHIFT:   return "R-SHIFT";
+    case KEY_LEFT_CONTROL:  return "L-CTRL";
+    case KEY_RIGHT_CONTROL: return "R-CTRL";
+    case KEY_SPACE:         return "SPACE";
+    case KEY_ENTER:         return "ENTER";
+    case KEY_TAB:           return "TAB";
+    case KEY_BACKSPACE:     return "BACKSPACE";
+    case KEY_ESCAPE:        return "ESCAPE";
     }
+
+  static char str[16];
+
+  /* Ask GLFW what character the current keyboard layout assigns to this
+   * physical key. 
+   * Returns NULL for keys with no printable representation. 
+  */
+  const char *name = glfwGetKeyName (key, 0);
+  if (name != NULL && name[0] != '\0')
+    {
+      size_t i = 0;
+      while (name[i] != '\0' && i < sizeof (str) - 1)
+        {
+          str[i] = (i == 0) ? (char)toupper ((unsigned char)name[i]) : name[i];
+          i++;
+        }
+      str[i] = '\0';
+      return str;
+    }
+
+  sprintf (str, "%d", key);
+  return str;
 }
