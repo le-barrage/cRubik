@@ -25,7 +25,7 @@ timeIsDNF (char time[20])
 }
 
 static cJSON *
-readFsonFromFile (const char *filename)
+readJsonFromFile (const char *filename)
 {
   FILE *file = fopen (filename, "r");
   if (!file)
@@ -424,7 +424,7 @@ modifySolveField (int index, int cubeSize, FieldType field_type)
   char filename[MAX_FILENAME_LEN];
   getFileName (filename, cubeSize);
 
-  cJSON *json = readFsonFromFile (filename);
+  cJSON *json = readJsonFromFile (filename);
   if (json == NULL)
     {
       return;
