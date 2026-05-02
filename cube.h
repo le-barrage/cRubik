@@ -39,7 +39,15 @@ typedef struct Cube {
   int rotationDegrees;
 } Cube;
 
+typedef struct {
+  Rotation moves[4];
+  int count;
+  Face faceMap[6];
+} CubeOrientation;
+
 Cube Cube_make(float cubletSize);
+
+Cube Cube_deepCopy(Cube *src);
 
 void Cube_free(Cube cube);
 
@@ -52,5 +60,12 @@ void Cube_applyMove(Cube *cube, char *move);
 void Cube_rotate(Cube *cube, Rotation rotation, int numberOfLayers);
 
 char *Cube_toString(Cube *cube, char cubeStr[55]);
+
+CubeOrientation Cube_detectOrientationAndNormalize(Cube *src,
+                                                   Cube *outCanonical);
+
+void Cube_appendNormalizationTokens(char *buf, const CubeOrientation *o);
+
+char Cube_faceLetter(Face f);
 
 #endif // !CUBE_H

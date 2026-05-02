@@ -41,6 +41,26 @@ Cube_make (float cubletSize)
   return cube;
 }
 
+Cube
+Cube_deepCopy (Cube *src)
+{
+  Cube dst;
+  dst.cube = (Cubie ***)malloc (SIZE * sizeof (Cubie **));
+  for (unsigned short int x = 0; x < SIZE; x++)
+    {
+      dst.cube[x] = (Cubie **)malloc (SIZE * sizeof (Cubie *));
+      for (unsigned short int y = 0; y < SIZE; y++)
+        {
+          dst.cube[x][y] = (Cubie *)malloc (SIZE * sizeof (Cubie));
+          memcpy (dst.cube[x][y], src->cube[x][y], SIZE * sizeof (Cubie));
+        }
+    }
+  dst.isAnimating = src->isAnimating;
+  dst.rotationDegrees = src->rotationDegrees;
+  dst.currentRotation = src->currentRotation;
+  return dst;
+}
+
 void
 Cube_free (Cube cube)
 {
@@ -581,4 +601,161 @@ Cube_toString (Cube *cube, char cubeStr[55])
       }
   cubeStr[index] = '\0';
   return cubeStr;
+}
+
+/*----------------------------------------------------------------*/
+
+static const Color CANONICAL_COLOR[6] = {
+  [UP] = WHITE,   [FRONT] = GREEN, [RIGHT] = RED,
+  [BACK] = BLUE,  [LEFT] = ORANGE, [DOWN] = YELLOW,
+};
+
+static Color
+worldCenterColor (Cube *cube, Face face)
+{
+  int mid = SIZE / 2;
+  switch (face)
+    {
+    case UP:    return cube->cube[mid][SIZE - 1][mid].colors[UP];
+    case DOWN:  return cube->cube[mid][0][mid].colors[DOWN];
+    case FRONT: return cube->cube[mid][mid][SIZE - 1].colors[FRONT];
+    case BACK:  return cube->cube[mid][mid][0].colors[BACK];
+    case LEFT:  return cube->cube[0][mid][mid].colors[LEFT];
+    case RIGHT: return cube->cube[SIZE - 1][mid][mid].colors[RIGHT];
+    }
+  return BLACK;
+}
+
+static Face
+findWorldFaceShowing (Cube *cube, Color target)
+{
+  Face all[6] = { UP, FRONT, RIGHT, BACK, LEFT, DOWN };
+  for (int i = 0; i < 6; i++)
+    if (colorsEqual (worldCenterColor (cube, all[i]), target))
+      return all[i];
+  return UP;
+}
+
+CubeOrientation
+Cube_detectOrientationAndNormalize (Cube *src, Cube *outCanonical)
+{
+  CubeOrientation o = { .count = 0 };
+  for (int f = 0; f < 6; f++)
+    o.faceMap[f] = findWorldFaceShowing (src, CANONICAL_COLOR[f]);
+
+  *outCanonical = Cube_deepCopy (src);
+
+  Face whitePos = findWorldFaceShowing (outCanonical, WHITE);
+  switch (whitePos)
+    {
+    case UP:
+      break;
+    case FRONT:
+      Cube_rotate (outCanonical, X, SIZE / 2);
+      o.moves[o.count++] = X;
+      break;
+    case BACK:
+      Cube_rotate (outCanonical, x, SIZE / 2);
+      o.moves[o.count++] = x;
+      break;
+    case LEFT:
+      Cube_rotate (outCanonical, Z, SIZE / 2);
+      o.moves[o.count++] = Z;
+      break;
+    case RIGHT:
+      Cube_rotate (outCanonical, z, SIZE / 2);
+      o.moves[o.count++] = z;
+      break;
+    case DOWN:
+      Cube_rotate (outCanonical, X, SIZE / 2);
+      Cube_rotate (outCanonical, X, SIZE / 2);
+      o.moves[o.count++] = X;
+      o.moves[o.count++] = X;
+      break;
+    }
+
+  Face greenPos = findWorldFaceShowing (outCanonical, GREEN);
+  switch (greenPos)
+    {
+    case FRONT:
+      break;
+    case RIGHT:
+      Cube_rotate (outCanonical, Y, SIZE / 2);
+      o.moves[o.count++] = Y;
+      break;
+    case LEFT:
+      Cube_rotate (outCanonical, y, SIZE / 2);
+      o.moves[o.count++] = y;
+      break;
+    case BACK:
+      Cube_rotate (outCanonical, Y, SIZE / 2);
+      Cube_rotate (outCanonical, Y, SIZE / 2);
+      o.moves[o.count++] = Y;
+      o.moves[o.count++] = Y;
+      break;
+    default:
+      break;
+    }
+
+  return o;
+}
+
+static char
+rotationLetter (Rotation r)
+{
+  switch (r)
+    {
+    case X: case x: return 'X';
+    case Y: case y: return 'Y';
+    case Z: case z: return 'Z';
+    default:        return '?';
+    }
+}
+
+static bool
+rotationIsInverse (Rotation r)
+{
+  return r == x || r == y || r == z;
+}
+
+void
+Cube_appendNormalizationTokens (char *buf, const CubeOrientation *o)
+{
+  int len = strlen (buf);
+  for (int i = 0; i < o->count;)
+    {
+      Rotation r = o->moves[i];
+      char letter = rotationLetter (r);
+      if (i + 1 < o->count && o->moves[i + 1] == r)
+        {
+          buf[len++] = letter;
+          buf[len++] = '2';
+          buf[len++] = ' ';
+          i += 2;
+        }
+      else
+        {
+          buf[len++] = letter;
+          if (rotationIsInverse (r))
+            buf[len++] = '\'';
+          buf[len++] = ' ';
+          i++;
+        }
+    }
+  buf[len] = '\0';
+}
+
+char
+Cube_faceLetter (Face f)
+{
+  switch (f)
+    {
+    case UP:    return 'U';
+    case RIGHT: return 'R';
+    case FRONT: return 'F';
+    case DOWN:  return 'D';
+    case LEFT:  return 'L';
+    case BACK:  return 'B';
+    }
+  return '?';
 }

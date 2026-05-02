@@ -33,6 +33,14 @@
 
 short SOLUTION_DEPTH = 22;
 
+typedef enum
+{
+  SOLVER_REORIENT,
+  SOLVER_PRESERVE
+} SolverOutputMode;
+
+SolverOutputMode solverOutputMode = SOLVER_REORIENT;
+
 float camera_mag;
 float camera_mag_vel;
 float camera_theta;
@@ -41,7 +49,7 @@ float camera_phi;
 Camera camera = { { 0 }, { 0, 0, 0 }, { 0, 1, 0 }, 90, CAMERA_PERSPECTIVE };
 
 Cube cube;
-char **scramble, *currentScramble, currentSolution[76], solutionFoundText[45],
+char **scramble, *currentScramble, currentSolution[100], solutionFoundText[45],
     times[5][20], avg[10];
 int currentSolutionSize;
 Queue queue;
@@ -110,43 +118,42 @@ applyMovesAndUpdateCurrentScramble ()
 int
 findSolutionAndUpdateMoves (Cube *cube, int depthLimit, int timeOut)
 {
+  Cube canonical;
+  CubeOrientation orientation
+      = Cube_detectOrientationAndNormalize (cube, &canonical);
+
   char cubeStr[55];
-  Cube_toString (cube, cubeStr);
+  Cube_toString (&canonical, cubeStr);
+  Cube_free (canonical);
+
   Move moves[25] = { 0 };
   int depth;
   int error = findSolutionBasic (cubeStr, depthLimit, timeOut, moves, &depth);
   if (error != 0)
-    {
-      return error;
-    }
+    return error;
 
-  int currentMovesIndex = 0;
-  for (int i = 0; i < 25; i++)
+  currentSolution[0] = '\0';
+
+  if (solverOutputMode == SOLVER_REORIENT)
+    Cube_appendNormalizationTokens (currentSolution, &orientation);
+
+  int len = strlen (currentSolution);
+  for (int i = 0; i < depth; i++)
     {
-      if (currentSolutionSize == depth)
-        break;
       Move cur = moves[i];
-      if (cur.orientation == 0)
-        currentSolution[currentMovesIndex++] = 'U';
-      else if (cur.orientation == 1)
-        currentSolution[currentMovesIndex++] = 'R';
-      else if (cur.orientation == 2)
-        currentSolution[currentMovesIndex++] = 'F';
-      else if (cur.orientation == 3)
-        currentSolution[currentMovesIndex++] = 'D';
-      else if (cur.orientation == 4)
-        currentSolution[currentMovesIndex++] = 'L';
-      else if (cur.orientation == 5)
-        currentSolution[currentMovesIndex++] = 'B';
+      Face emitFace = (solverOutputMode == SOLVER_PRESERVE)
+                          ? orientation.faceMap[cur.orientation]
+                          : cur.orientation;
+      currentSolution[len++] = Cube_faceLetter (emitFace);
       if (cur.direction == ANTICW)
-        currentSolution[currentMovesIndex++] = '\'';
+        currentSolution[len++] = '\'';
       else if (cur.direction == HALF)
-        currentSolution[currentMovesIndex++] = '2';
-      if (i != 24)
-        currentSolution[currentMovesIndex++] = ' ';
+        currentSolution[len++] = '2';
+      if (i != depth - 1)
+        currentSolution[len++] = ' ';
       currentSolutionSize++;
     }
-  currentSolution[currentMovesIndex] = '\0';
+  currentSolution[len] = '\0';
 
   return 0;
 }
@@ -661,6 +668,25 @@ drawKeyBindingsUI (int startY)
     }
 }
 
+void
+solverOutputModeToggle (int startY)
+{
+  int toggleWidth = 280, toggleHeight = 30;
+  Rectangle bounds
+      = (Rectangle){ .x = (float)(GetScreenWidth () - toggleWidth) / 2,
+                     .y = (float)startY,
+                     .width = (float)toggleWidth / 2,
+                     .height = (float)toggleHeight };
+
+  int active = (int)solverOutputMode;
+  GuiToggleGroup (bounds, "Re-orient cube;Preserve view", &active);
+  solverOutputMode = (SolverOutputMode)active;
+
+  const char *label = "Solver output:";
+  DrawText (label, (GetScreenWidth () - MeasureText (label, DEFAULT_FONT_SIZE)) / 2,
+            startY - 30, DEFAULT_FONT_SIZE, BLACK);
+}
+
 // TODO: save options to a file
 void
 drawOptionsScreen ()
@@ -672,6 +698,7 @@ drawOptionsScreen ()
 
   drawKeyBindingsUI (60);
   rotationSpeedSlider (450);
+  solverOutputModeToggle (550);
 }
 
 void
