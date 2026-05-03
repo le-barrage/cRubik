@@ -264,10 +264,16 @@ solves_save (const char *time, const char *scramble, int cube_size)
       FILE *probe = fopen (filename, "rb");
       if (probe)
         {
+          fseek (probe, 0, SEEK_END);
+          long size = ftell (probe);
           fclose (probe);
-          fprintf (stderr,
-                   "%s: refusing to overwrite unparseable file\n", filename);
-          return;
+          if (size > 0)
+            {
+              fprintf (stderr,
+                       "%s: refusing to overwrite unparseable file\n",
+                       filename);
+              return;
+            }
         }
 
       root = new_solves_root (cube_size);
