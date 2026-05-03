@@ -4,7 +4,7 @@
 
 struct queue_node
 {
-  Rotation data;
+  rotation_t data;
   struct queue_node *next;
 };
 
@@ -41,7 +41,7 @@ queue_is_empty (const queue_t *q)
 }
 
 queue_status_t
-queue_push (queue_t *q, Rotation value)
+queue_push (queue_t *q, rotation_t value)
 {
   struct queue_node *node = malloc (sizeof (*node));
   if (node == NULL)
@@ -60,7 +60,7 @@ queue_push (queue_t *q, Rotation value)
 }
 
 queue_status_t
-queue_pop (queue_t *q, Rotation *out)
+queue_pop (queue_t *q, rotation_t *out)
 {
   if (q->front == NULL)
     return QUEUE_EMPTY;
@@ -76,7 +76,7 @@ queue_pop (queue_t *q, Rotation *out)
 }
 
 queue_status_t
-queue_peek (const queue_t *q, Rotation *out)
+queue_peek (const queue_t *q, rotation_t *out)
 {
   if (q->front == NULL)
     return QUEUE_EMPTY;
@@ -87,7 +87,7 @@ queue_peek (const queue_t *q, Rotation *out)
 void
 queue_clear (queue_t *q)
 {
-  Rotation discard;
+  rotation_t discard;
   while (queue_pop (q, &discard) == QUEUE_OK)
     ;
 }

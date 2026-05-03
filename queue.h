@@ -4,7 +4,7 @@
 #include "cube.h"
 #include <stdbool.h>
 
-/* Opaque FIFO queue of Rotation values. Construct with queue_create, free
+/* Opaque FIFO queue of rotation_t values. Construct with queue_create, free
  * with queue_destroy. */
 typedef struct queue queue_t;
 
@@ -27,8 +27,8 @@ void queue_clear (queue_t *q);
 
 bool queue_is_empty (const queue_t *q);
 
-queue_status_t queue_push (queue_t *q, Rotation value);
-queue_status_t queue_pop (queue_t *q, Rotation *out);
-queue_status_t queue_peek (const queue_t *q, Rotation *out);
+queue_status_t queue_push (queue_t *q, rotation_t value);
+queue_status_t queue_pop (queue_t *q, rotation_t *out);
+queue_status_t queue_peek (const queue_t *q, rotation_t *out);
 
 #endif // QUEUE_H

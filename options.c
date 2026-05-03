@@ -18,6 +18,13 @@
 #define DEFAULT_SOLVER_OUTPUT_MODE SOLVER_REORIENT
 
 SolverOutputMode solverOutputMode = DEFAULT_SOLVER_OUTPUT_MODE;
+static int rotation_speed = DEFAULT_ROTATION_SPEED;
+
+int
+options_rotation_speed (void)
+{
+  return rotation_speed;
+}
 
 static int editingKeyIndex = -1;
 
@@ -126,7 +133,7 @@ drawKeyBindingsUI (int startY)
 static void
 rotationSpeedSlider (int startY)
 {
-  float r = (float)ROTATIONSPEED;
+  float r = (float)rotation_speed;
   int sliderWidth = 150, sliderHeight = 30;
   Rectangle sliderRectangle
       = (Rectangle){ .x = (float)(GetScreenWidth () - sliderWidth) / 2,
@@ -135,7 +142,7 @@ rotationSpeedSlider (int startY)
                      .height = sliderHeight };
 
   if (GuiSlider (sliderRectangle, "0", "30", &r, 1.f, 30.f))
-    ROTATIONSPEED = (int)r;
+    rotation_speed = (int)r;
 
   const char *crs = "Cube Rotation Speed:";
   DrawText (
@@ -143,7 +150,7 @@ rotationSpeedSlider (int startY)
       sliderRectangle.x
           + (sliderRectangle.width - MeasureText (crs, DEFAULT_FONT_SIZE)) / 2,
       sliderRectangle.y - 30, DEFAULT_FONT_SIZE, BLACK);
-  const char *rs = TextFormat ("%d", ROTATIONSPEED);
+  const char *rs = TextFormat ("%d", rotation_speed);
   DrawText (rs,
             sliderRectangle.x
                 + (sliderRectangle.width - MeasureText (rs, DEFAULT_FONT_SIZE))
@@ -202,7 +209,7 @@ void
 Options_resetToDefaults (void)
 {
   keybindings_init ();
-  ROTATIONSPEED = DEFAULT_ROTATION_SPEED;
+  rotation_speed = DEFAULT_ROTATION_SPEED;
   solverOutputMode = DEFAULT_SOLVER_OUTPUT_MODE;
   editingKeyIndex = -1;
 }
@@ -270,7 +277,7 @@ Options_load (void)
 
   cJSON *rs = cJSON_GetObjectItemCaseSensitive (root, "rotationSpeed");
   if (cJSON_IsNumber (rs))
-    ROTATIONSPEED = rs->valueint;
+    rotation_speed = rs->valueint;
 
   cJSON *som = cJSON_GetObjectItemCaseSensitive (root, "solverOutputMode");
   if (cJSON_IsString (som) && som->valuestring)
@@ -304,7 +311,7 @@ Options_save (void)
     return;
 
   cJSON_AddNumberToObject (root, "version", OPTIONS_VERSION);
-  cJSON_AddNumberToObject (root, "rotationSpeed", ROTATIONSPEED);
+  cJSON_AddNumberToObject (root, "rotationSpeed", rotation_speed);
   cJSON_AddStringToObject (root, "solverOutputMode",
                            solverOutputMode == SOLVER_PRESERVE ? "preserve"
                                                                : "reorient");

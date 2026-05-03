@@ -6,7 +6,7 @@
 
 typedef struct
 {
-  const Rotation *moves;
+  const rotation_t *moves;
   size_t move_count;
   const char *name;
 } pattern_t;

@@ -1,5 +1,5 @@
 #include "cube.h"
-#include "cublet.h"
+
 #include "include/raylib.h"
 #include "utils.h"
 #include <ctype.h>
@@ -7,309 +7,292 @@
 #include <stdlib.h>
 #include <string.h>
 
-int SIZE = 3, MAXSIZE = 9, ROTATIONSPEED = 25;
+#define ROTATION_DEGREES_FULL 90
+#define ROTATION_PAIR_COUNT 12
+
+/* The rotation_t enum is laid out as 12 (cw, prime) pairs: ROT_U/ROT_U_PRIME,
+ * ROT_D/ROT_D_PRIME, ..., ROT_Z/ROT_Z_PRIME. This table maps each pair index
+ * (0..11) to its single-character cubing notation letter. */
+static const char ROTATION_LETTERS[] = "UDRLFBMESXYZ";
 
 static bool
-isInnerCubie (float x, float y, float z)
+is_inner_cubie (int x, int y, int z, int size)
 {
-  return x != 0 && y != 0 && z != 0 && x != SIZE - 1 && y != SIZE - 1
-         && z != SIZE - 1;
+  return x != 0 && y != 0 && z != 0 && x != size - 1 && y != size - 1
+         && z != size - 1;
 }
 
-Cube
-Cube_make (float cubletSize)
+cube_t
+cube_make (int size, float cubie_size)
 {
-  Cube cube;
-  cube.cube = (cubie_t ***)malloc (SIZE * sizeof (cubie_t **));
-  for (unsigned short int x = 0; x < SIZE; x++)
+  cube_t cube;
+  cube.size = size;
+  cube.cube = malloc (size * sizeof (cubie_t **));
+  for (int x = 0; x < size; x++)
     {
-      cube.cube[x] = (cubie_t **)malloc (SIZE * sizeof (cubie_t *));
-      for (unsigned short int y = 0; y < SIZE; y++)
+      cube.cube[x] = malloc (size * sizeof (cubie_t *));
+      for (int y = 0; y < size; y++)
         {
-          cube.cube[x][y] = (cubie_t *)malloc (SIZE * sizeof (cubie_t));
-          for (unsigned short int z = 0; z < SIZE; z++)
+          cube.cube[x][y] = malloc (size * sizeof (cubie_t));
+          for (int z = 0; z < size; z++)
             {
-              if (isInnerCubie (x, y, z))
+              if (is_inner_cubie (x, y, z, size))
                 continue;
-              cube.cube[x][y][z] = cubie_make (x, y, z, cubletSize, SIZE);
+              cube.cube[x][y][z] = cubie_make (x, y, z, cubie_size, size);
             }
         }
     }
-  cube.isAnimating = false;
-  cube.rotationDegrees = 0;
-  cube.currentRotation = -1;
+  cube.is_animating = false;
+  cube.rotation_degrees = 0;
+  cube.current_rotation = (rotation_t)-1;
   return cube;
 }
 
-Cube
-Cube_deepCopy (Cube *src)
+cube_t
+cube_deep_copy (const cube_t *src)
 {
-  Cube dst;
-  dst.cube = (cubie_t ***)malloc (SIZE * sizeof (cubie_t **));
-  for (unsigned short int x = 0; x < SIZE; x++)
+  cube_t dst;
+  dst.size = src->size;
+  dst.cube = malloc (src->size * sizeof (cubie_t **));
+  for (int x = 0; x < src->size; x++)
     {
-      dst.cube[x] = (cubie_t **)malloc (SIZE * sizeof (cubie_t *));
-      for (unsigned short int y = 0; y < SIZE; y++)
+      dst.cube[x] = malloc (src->size * sizeof (cubie_t *));
+      for (int y = 0; y < src->size; y++)
         {
-          dst.cube[x][y] = (cubie_t *)malloc (SIZE * sizeof (cubie_t));
-          memcpy (dst.cube[x][y], src->cube[x][y], SIZE * sizeof (cubie_t));
+          dst.cube[x][y] = malloc (src->size * sizeof (cubie_t));
+          memcpy (dst.cube[x][y], src->cube[x][y],
+                  src->size * sizeof (cubie_t));
         }
     }
-  dst.isAnimating = src->isAnimating;
-  dst.rotationDegrees = src->rotationDegrees;
-  dst.currentRotation = src->currentRotation;
+  dst.is_animating = src->is_animating;
+  dst.rotation_degrees = src->rotation_degrees;
+  dst.current_rotation = src->current_rotation;
   return dst;
 }
 
 void
-Cube_free (Cube cube)
+cube_destroy (cube_t *cube)
 {
-  for (unsigned short int x = 0; x < SIZE; x++)
+  if (cube == NULL || cube->cube == NULL)
+    return;
+  for (int x = 0; x < cube->size; x++)
     {
-      for (unsigned short int y = 0; y < SIZE; y++)
-        {
-          free (cube.cube[x][y]);
-        }
-      free (cube.cube[x]);
+      for (int y = 0; y < cube->size; y++)
+        free (cube->cube[x][y]);
+      free (cube->cube[x]);
     }
-  free (cube.cube);
+  free (cube->cube);
+  cube->cube = NULL;
+  cube->size = 0;
 }
 
 static void
-handleAnimating (Cube *cube)
+step_animation (cube_t *cube, int rotation_speed)
 {
-  if (cube->isAnimating)
-    cube->rotationDegrees += ROTATIONSPEED;
-  if (cube->rotationDegrees > 90)
+  if (cube->is_animating)
+    cube->rotation_degrees += rotation_speed;
+  if (cube->rotation_degrees > ROTATION_DEGREES_FULL)
     {
-      cube->rotationDegrees = 0;
-      cube->isAnimating = false;
-      Cube_rotate (cube, cube->currentRotation, 1);
-      cube->currentRotation = -1;
+      cube->rotation_degrees = 0;
+      cube->is_animating = false;
+      cube_rotate (cube, cube->current_rotation, 1);
+      cube->current_rotation = (rotation_t)-1;
     }
+}
+
+/* Which layer along axis_dim is affected by a given rotation. ALL means the
+ * whole cube spins, so every cubie participates. */
+typedef enum
+{
+  LAYER_ALL,
+  LAYER_INDEX_ZERO,
+  LAYER_INDEX_LAST,
+  LAYER_INDEX_MIDDLE,
+} layer_pos_t;
+
+#define AXIS_X 0
+#define AXIS_Y 1
+#define AXIS_Z 2
+
+typedef struct
+{
+  Vector3 axis;        /* axis direction: sign chosen for cw vs prime */
+  int axis_dim;        /* AXIS_X / AXIS_Y / AXIS_Z, ignored for LAYER_ALL */
+  layer_pos_t kind;
+} rotation_axis_def_t;
+
+static const rotation_axis_def_t ROTATION_AXES[24] = {
+  [ROT_U]       = { {  0, -1,  0 }, AXIS_Y, LAYER_INDEX_LAST   },
+  [ROT_U_PRIME] = { {  0,  1,  0 }, AXIS_Y, LAYER_INDEX_LAST   },
+  [ROT_D]       = { {  0,  1,  0 }, AXIS_Y, LAYER_INDEX_ZERO   },
+  [ROT_D_PRIME] = { {  0, -1,  0 }, AXIS_Y, LAYER_INDEX_ZERO   },
+  [ROT_R]       = { { -1,  0,  0 }, AXIS_X, LAYER_INDEX_LAST   },
+  [ROT_R_PRIME] = { {  1,  0,  0 }, AXIS_X, LAYER_INDEX_LAST   },
+  [ROT_L]       = { {  1,  0,  0 }, AXIS_X, LAYER_INDEX_ZERO   },
+  [ROT_L_PRIME] = { { -1,  0,  0 }, AXIS_X, LAYER_INDEX_ZERO   },
+  [ROT_F]       = { {  0,  0, -1 }, AXIS_Z, LAYER_INDEX_LAST   },
+  [ROT_F_PRIME] = { {  0,  0,  1 }, AXIS_Z, LAYER_INDEX_LAST   },
+  [ROT_B]       = { {  0,  0,  1 }, AXIS_Z, LAYER_INDEX_ZERO   },
+  [ROT_B_PRIME] = { {  0,  0, -1 }, AXIS_Z, LAYER_INDEX_ZERO   },
+  [ROT_M]       = { {  1,  0,  0 }, AXIS_X, LAYER_INDEX_MIDDLE },
+  [ROT_M_PRIME] = { { -1,  0,  0 }, AXIS_X, LAYER_INDEX_MIDDLE },
+  [ROT_E]       = { {  0,  1,  0 }, AXIS_Y, LAYER_INDEX_MIDDLE },
+  [ROT_E_PRIME] = { {  0, -1,  0 }, AXIS_Y, LAYER_INDEX_MIDDLE },
+  [ROT_S]       = { {  0,  0, -1 }, AXIS_Z, LAYER_INDEX_MIDDLE },
+  [ROT_S_PRIME] = { {  0,  0,  1 }, AXIS_Z, LAYER_INDEX_MIDDLE },
+  [ROT_X]       = { { -1,  0,  0 }, AXIS_X, LAYER_ALL          },
+  [ROT_X_PRIME] = { {  1,  0,  0 }, AXIS_X, LAYER_ALL          },
+  [ROT_Y]       = { {  0, -1,  0 }, AXIS_Y, LAYER_ALL          },
+  [ROT_Y_PRIME] = { {  0,  1,  0 }, AXIS_Y, LAYER_ALL          },
+  [ROT_Z]       = { {  0,  0, -1 }, AXIS_Z, LAYER_ALL          },
+  [ROT_Z_PRIME] = { {  0,  0,  1 }, AXIS_Z, LAYER_ALL          },
+};
+
+static bool
+is_in_layer (int pos[3], int axis_dim, layer_pos_t kind, int size)
+{
+  switch (kind)
+    {
+    case LAYER_ALL:          return true;
+    case LAYER_INDEX_ZERO:   return pos[axis_dim] == 0;
+    case LAYER_INDEX_LAST:   return pos[axis_dim] == size - 1;
+    case LAYER_INDEX_MIDDLE: return pos[axis_dim] > 0 && pos[axis_dim] < size - 1;
+    }
+  return false;
 }
 
 static Vector3
-getRotationVector (Rotation rotation, int posX, int posY, int posZ)
+cubie_rotation_axis (rotation_t rotation, int pos_x, int pos_y, int pos_z,
+                    int size)
 {
-  switch (rotation)
-    {
-    case X:
-      return (Vector3){ -1, 0, 0 };
-    case x:
-      return (Vector3){ 1, 0, 0 };
-    case Y:
-      return (Vector3){ 0, -1, 0 };
-    case y:
-      return (Vector3){ 0, 1, 0 };
-    case Z:
-      return (Vector3){ 0, 0, -1 };
-    case z:
-      return (Vector3){ 0, 0, 1 };
-    case U:
-      return (posY == SIZE - 1) ? (Vector3){ 0, -1, 0 } : (Vector3){ 0, 0, 0 };
-    case u:
-      return (posY == SIZE - 1) ? (Vector3){ 0, 1, 0 } : (Vector3){ 0, 0, 0 };
-    case D:
-      return (posY == 0) ? (Vector3){ 0, 1, 0 } : (Vector3){ 0, 0, 0 };
-    case d:
-      return (posY == 0) ? (Vector3){ 0, -1, 0 } : (Vector3){ 0, 0, 0 };
-    case E:
-      return (0 < posY && posY < SIZE - 1) ? (Vector3){ 0, 1, 0 }
-                                           : (Vector3){ 0, 0, 0 };
-    case e:
-      return (0 < posY && posY < SIZE - 1) ? (Vector3){ 0, -1, 0 }
-                                           : (Vector3){ 0, 0, 0 };
-    case R:
-      return (posX == SIZE - 1) ? (Vector3){ -1, 0, 0 } : (Vector3){ 0, 0, 0 };
-    case r:
-      return (posX == SIZE - 1) ? (Vector3){ 1, 0, 0 } : (Vector3){ 0, 0, 0 };
-    case L:
-      return (posX == 0) ? (Vector3){ 1, 0, 0 } : (Vector3){ 0, 0, 0 };
-    case l:
-      return (posX == 0) ? (Vector3){ -1, 0, 0 } : (Vector3){ 0, 0, 0 };
-    case M:
-      return (0 < posX && posX < SIZE - 1) ? (Vector3){ 1, 0, 0 }
-                                           : (Vector3){ 0, 0, 0 };
-    case m:
-      return (0 < posX && posX < SIZE - 1) ? (Vector3){ -1, 0, 0 }
-                                           : (Vector3){ 0, 0, 0 };
-    case F:
-      return (posZ == SIZE - 1) ? (Vector3){ 0, 0, -1 } : (Vector3){ 0, 0, 0 };
-    case f:
-      return (posZ == SIZE - 1) ? (Vector3){ 0, 0, 1 } : (Vector3){ 0, 0, 0 };
-    case B:
-      return (posZ == 0) ? (Vector3){ 0, 0, 1 } : (Vector3){ 0, 0, 0 };
-    case b:
-      return (posZ == 0) ? (Vector3){ 0, 0, -1 } : (Vector3){ 0, 0, 0 };
-    case S:
-      return (0 < posZ && posZ < SIZE - 1) ? (Vector3){ 0, 0, -1 }
-                                           : (Vector3){ 0, 0, 0 };
-    case s:
-      return (0 < posZ && posZ < SIZE - 1) ? (Vector3){ 0, 0, 1 }
-                                           : (Vector3){ 0, 0, 0 };
-    default:
-      return (Vector3){ 0, 0, 0 };
-    }
+  if (rotation < 0 || rotation >= (int)(sizeof (ROTATION_AXES) / sizeof (ROTATION_AXES[0])))
+    return (Vector3){ 0, 0, 0 };
+  const rotation_axis_def_t *def = &ROTATION_AXES[rotation];
+  int pos[3] = { pos_x, pos_y, pos_z };
+  if (!is_in_layer (pos, def->axis_dim, def->kind, size))
+    return (Vector3){ 0, 0, 0 };
+  return def->axis;
 }
 
 static void
-handleAnimation (Cube *cube, int posX, int posY, int posZ)
+draw_one_cubie (cube_t *cube, int pos_x, int pos_y, int pos_z)
 {
-  Vector3 position = (Vector3){ posX - (float)SIZE / 2 + 0.5f,
-                                posY - (float)SIZE / 2 + 0.5f,
-                                posZ - (float)SIZE / 2 + 0.5f };
+  Vector3 position = (Vector3){
+    pos_x - (float)cube->size / 2 + 0.5f,
+    pos_y - (float)cube->size / 2 + 0.5f,
+    pos_z - (float)cube->size / 2 + 0.5f,
+  };
 
-  Vector3 direction
-      = getRotationVector (cube->currentRotation, posX, posY, posZ);
-  int rotationDegrees
-      = (direction.x == 0 && direction.y == 0 && direction.z == 0)
-            ? 0
-            : cube->rotationDegrees;
-  cubie_draw (&cube->cube[posX][posY][posZ], position, direction,
-                   rotationDegrees);
+  Vector3 axis = cubie_rotation_axis (cube->current_rotation, pos_x, pos_y,
+                                      pos_z, cube->size);
+  bool axis_is_zero = (axis.x == 0 && axis.y == 0 && axis.z == 0);
+  int rotation_degrees = axis_is_zero ? 0 : cube->rotation_degrees;
+  cubie_draw (&cube->cube[pos_x][pos_y][pos_z], position, axis,
+              rotation_degrees);
 }
 
 void
-Cube_drawCube (Cube *cube)
+cube_draw (cube_t *cube, int rotation_speed)
 {
-  handleAnimating (cube);
-  for (unsigned short int x = 0; x < SIZE; x++)
-    for (unsigned short int y = 0; y < SIZE; y++)
-      for (unsigned short int z = 0; z < SIZE; z++)
+  step_animation (cube, rotation_speed);
+  for (int x = 0; x < cube->size; x++)
+    for (int y = 0; y < cube->size; y++)
+      for (int z = 0; z < cube->size; z++)
         {
-          if (isInnerCubie (x, y, z))
+          if (is_inner_cubie (x, y, z, cube->size))
             continue;
-          handleAnimation (cube, x, y, z);
+          draw_one_cubie (cube, x, y, z);
         }
 }
 
-Rotation
-getCorrespondingRotation (char c)
+bool
+rotation_from_char (char c, rotation_t *out)
 {
-  switch (c)
-    {
-    case 'U':
-      return U;
-    case 'u':
-      return u;
-    case 'D':
-      return D;
-    case 'd':
-      return d;
-    case 'R':
-      return R;
-    case 'r':
-      return r;
-    case 'L':
-      return L;
-    case 'l':
-      return l;
-    case 'F':
-      return F;
-    case 'f':
-      return f;
-    case 'B':
-      return B;
-    case 'b':
-      return b;
-    case 'M':
-      return M;
-    case 'm':
-      return m;
-    case 'E':
-      return E;
-    case 'e':
-      return e;
-    case 'S':
-      return S;
-    case 's':
-      return s;
-    case 'X':
-      return X;
-    case 'x':
-      return x;
-    case 'Y':
-      return Y;
-    case 'y':
-      return y;
-    case 'Z':
-      return Z;
-    case 'z':
-      return z;
-    default:
-      return -1;
-    }
+  bool prime = islower ((unsigned char)c);
+  char upper = (char)toupper ((unsigned char)c);
+  for (int i = 0; i < ROTATION_PAIR_COUNT; i++)
+    if (ROTATION_LETTERS[i] == upper)
+      {
+        *out = (rotation_t)(2 * i + (prime ? 1 : 0));
+        return true;
+      }
+  return false;
 }
 
 static char
-getRotation (const char *move, size_t len)
+face_letter_from_move (const char *move, size_t len)
 {
   if (move[len - 1] == '\'')
-    return tolower (move[len - 2]);
-  else if (move[len - 1] == '2')
+    return tolower ((unsigned char)move[len - 2]);
+  if (move[len - 1] == '2')
     return move[len - 2];
-  else
-    return move[len - 1];
+  return move[len - 1];
 }
 
 void
-Cube_applyMove (Cube *cube, char *move)
+cube_apply_move (cube_t *cube, const char *move)
 {
   size_t len = strlen (move);
-  int nbOfLayers;
+  int num_layers;
   if (move[1] == 'w')
-    nbOfLayers = move[0] - '0';
+    num_layers = move[0] - '0';
   else
-    nbOfLayers = (move[0] - '0') * 10 + move[1] - '0';
-  char rotation = getRotation (move, len);
+    num_layers = (move[0] - '0') * 10 + move[1] - '0';
+
+  rotation_t r;
+  if (!rotation_from_char (face_letter_from_move (move, len), &r))
+    {
+      fprintf (stderr, "cube_apply_move: bad move '%s'\n", move);
+      return;
+    }
+
   if (move[len - 1] == '2')
-    Cube_rotate (cube, getCorrespondingRotation (rotation), nbOfLayers);
-  Cube_rotate (cube, getCorrespondingRotation (rotation), nbOfLayers);
+    cube_rotate (cube, r, num_layers);
+  cube_rotate (cube, r, num_layers);
 }
 
 /*----------------------------------------------------------------*/
+/* Layer rotation                                                 */
 
-static unsigned short int
-calculateX (int dirX, int i)
+static int
+resolved_x (int dir_x, int i)
 {
-  return (dirX == -1) ? i : dirX;
+  return (dir_x == -1) ? i : dir_x;
 }
 
-static unsigned short int
-calculateY (int dirX, int dirY, int i, int j)
+static int
+resolved_y (int dir_x, int dir_y, int i, int j)
 {
-  return (dirY == -1) ? (dirX == -1) ? j : i : dirY;
+  return (dir_y == -1) ? (dir_x == -1) ? j : i : dir_y;
 }
 
-static unsigned short int
-calculateZ (int dirZ, int j)
+static int
+resolved_z (int dir_z, int j)
 {
-  return (dirZ == -1) ? j : dirZ;
+  return (dir_z == -1) ? j : dir_z;
 }
 
 static void
-storeFaceAndRotateCubies (Cube *cube, Vector3 dir,
-                          void (*cubieRotation) (cubie_t *),
-                          cubie_t face[SIZE][SIZE])
+extract_face_and_rotate_cubies (cube_t *cube, Vector3 dir,
+                                void (*cubie_rotation) (cubie_t *),
+                                int size, cubie_t face[size][size])
 {
-  unsigned short int x, y, z;
-  for (int i = 0; i < SIZE; i++)
-    for (int j = 0; j < SIZE; j++)
+  for (int i = 0; i < size; i++)
+    for (int j = 0; j < size; j++)
       {
-        x = calculateX (dir.x, i);
-        y = calculateY (dir.x, dir.y, i, j);
-        z = calculateZ (dir.z, j);
-        cubieRotation (&cube->cube[x][y][z]);
+        int x = resolved_x (dir.x, i);
+        int y = resolved_y (dir.x, dir.y, i, j);
+        int z = resolved_z (dir.z, j);
+        cubie_rotation (&cube->cube[x][y][z]);
         face[i][j] = cube->cube[x][y][z];
       }
 }
 
 static void
-transposeMatrix (cubie_t face[SIZE][SIZE])
+transpose_face (int size, cubie_t face[size][size])
 {
-  for (int i = 0; i < SIZE; i++)
-    for (int j = i + 1; j < SIZE; j++)
+  for (int i = 0; i < size; i++)
+    for (int j = i + 1; j < size; j++)
       {
         cubie_t temp = face[i][j];
         face[i][j] = face[j][i];
@@ -318,380 +301,301 @@ transposeMatrix (cubie_t face[SIZE][SIZE])
 }
 
 static void
-reverseRows (cubie_t face[SIZE][SIZE])
+reverse_face_rows (int size, cubie_t face[size][size])
 {
-  for (int i = 0; i < SIZE; i++)
-    for (int j = 0; j < SIZE / 2; j++)
+  for (int i = 0; i < size; i++)
+    for (int j = 0; j < size / 2; j++)
       {
         cubie_t temp = face[i][j];
-        face[i][j] = face[i][SIZE - j - 1];
-        face[i][SIZE - j - 1] = temp;
+        face[i][j] = face[i][size - j - 1];
+        face[i][size - j - 1] = temp;
       }
 }
 
 static void
-reverseColumns (cubie_t face[SIZE][SIZE])
+reverse_face_columns (int size, cubie_t face[size][size])
 {
-  for (int j = 0; j < SIZE; j++)
-    for (int i = 0; i < SIZE / 2; i++)
+  for (int j = 0; j < size; j++)
+    for (int i = 0; i < size / 2; i++)
       {
         cubie_t temp = face[i][j];
-        face[i][j] = face[SIZE - i - 1][j];
-        face[SIZE - i - 1][j] = temp;
+        face[i][j] = face[size - i - 1][j];
+        face[size - i - 1][j] = temp;
       }
 }
 
 static void
-updateCubeFace (Cube *cube, Vector3 dir, cubie_t face[SIZE][SIZE])
+write_face_back (cube_t *cube, Vector3 dir, int size,
+                 cubie_t face[size][size])
 {
-  unsigned short int x, y, z;
-  for (int i = 0; i < SIZE; i++)
-    for (int j = 0; j < SIZE; j++)
+  for (int i = 0; i < size; i++)
+    for (int j = 0; j < size; j++)
       {
-        x = calculateX (dir.x, i);
-        y = calculateY (dir.x, dir.y, i, j);
-        z = calculateZ (dir.z, j);
+        int x = resolved_x (dir.x, i);
+        int y = resolved_y (dir.x, dir.y, i, j);
+        int z = resolved_z (dir.z, j);
         cube->cube[x][y][z] = face[i][j];
       }
 }
 
 static void
-rotate (Cube *cube, Vector3 dir, void (*cubieRotation) (cubie_t *),
-        bool antiClockwise)
+rotate_layer (cube_t *cube, Vector3 dir,
+              void (*cubie_rotation) (cubie_t *), bool anti_clockwise)
 {
-  cubie_t face[SIZE][SIZE];
-  storeFaceAndRotateCubies (cube, dir, cubieRotation, face);
-  transposeMatrix (face);
-  if (antiClockwise)
-    reverseRows (face);
+  int size = cube->size;
+  cubie_t face[size][size];
+  extract_face_and_rotate_cubies (cube, dir, cubie_rotation, size, face);
+  transpose_face (size, face);
+  if (anti_clockwise)
+    reverse_face_rows (size, face);
   else
-    reverseColumns (face);
-  updateCubeFace (cube, dir, face);
+    reverse_face_columns (size, face);
+  write_face_back (cube, dir, size, face);
+}
+
+/* How a rotation enumerates layers along its axis:
+ *  - FROM_ZERO:  outer face anchored at index 0 (D, L, B). Layer i uses i.
+ *  - FROM_LAST:  outer face anchored at index size-1 (U, R, F). Layer i uses
+ *                size-1-i.
+ *  - MIDDLE:     slice rotation (M, E, S). Iterates indices num_layers ..
+ *                size-num_layers-1. */
+typedef enum
+{
+  LAYER_ITER_FROM_ZERO,
+  LAYER_ITER_FROM_LAST,
+  LAYER_ITER_MIDDLE,
+} layer_iter_t;
+
+typedef struct
+{
+  int axis_dim;        /* AXIS_X / AXIS_Y / AXIS_Z */
+  layer_iter_t iter;
+  void (*cubie_rotation) (cubie_t *);
+  bool anti_clockwise;
+} layer_rotation_def_t;
+
+static const layer_rotation_def_t LAYER_ROTATIONS[18] = {
+  [ROT_U]       = { AXIS_Y, LAYER_ITER_FROM_LAST, cubie_rotate_left,          false },
+  [ROT_U_PRIME] = { AXIS_Y, LAYER_ITER_FROM_LAST, cubie_rotate_right,         true  },
+  [ROT_D]       = { AXIS_Y, LAYER_ITER_FROM_ZERO, cubie_rotate_right,         true  },
+  [ROT_D_PRIME] = { AXIS_Y, LAYER_ITER_FROM_ZERO, cubie_rotate_left,          false },
+  [ROT_R]       = { AXIS_X, LAYER_ITER_FROM_LAST, cubie_rotate_up,            true  },
+  [ROT_R_PRIME] = { AXIS_X, LAYER_ITER_FROM_LAST, cubie_rotate_down,          false },
+  [ROT_L]       = { AXIS_X, LAYER_ITER_FROM_ZERO, cubie_rotate_down,          false },
+  [ROT_L_PRIME] = { AXIS_X, LAYER_ITER_FROM_ZERO, cubie_rotate_up,            true  },
+  [ROT_F]       = { AXIS_Z, LAYER_ITER_FROM_LAST, cubie_rotate_clockwise,     true  },
+  [ROT_F_PRIME] = { AXIS_Z, LAYER_ITER_FROM_LAST, cubie_rotate_anticlockwise, false },
+  [ROT_B]       = { AXIS_Z, LAYER_ITER_FROM_ZERO, cubie_rotate_anticlockwise, false },
+  [ROT_B_PRIME] = { AXIS_Z, LAYER_ITER_FROM_ZERO, cubie_rotate_clockwise,     true  },
+  [ROT_M]       = { AXIS_X, LAYER_ITER_MIDDLE,    cubie_rotate_down,          false },
+  [ROT_M_PRIME] = { AXIS_X, LAYER_ITER_MIDDLE,    cubie_rotate_up,            true  },
+  [ROT_E]       = { AXIS_Y, LAYER_ITER_MIDDLE,    cubie_rotate_right,         true  },
+  [ROT_E_PRIME] = { AXIS_Y, LAYER_ITER_MIDDLE,    cubie_rotate_left,          false },
+  [ROT_S]       = { AXIS_Z, LAYER_ITER_MIDDLE,    cubie_rotate_clockwise,     true  },
+  [ROT_S_PRIME] = { AXIS_Z, LAYER_ITER_MIDDLE,    cubie_rotate_anticlockwise, false },
+};
+
+/* Whole-cube rotations decompose into one face turn + one slice + one
+ * opposite-face turn, all by num_layers = size/2. */
+static const rotation_t WHOLE_CUBE_DECOMPOSITION[6][3] = {
+  [ROT_X       - ROT_X] = { ROT_R,       ROT_M_PRIME, ROT_L_PRIME },
+  [ROT_X_PRIME - ROT_X] = { ROT_R_PRIME, ROT_M,       ROT_L       },
+  [ROT_Y       - ROT_X] = { ROT_U,       ROT_E_PRIME, ROT_D_PRIME },
+  [ROT_Y_PRIME - ROT_X] = { ROT_U_PRIME, ROT_E,       ROT_D       },
+  [ROT_Z       - ROT_X] = { ROT_F,       ROT_S,       ROT_B_PRIME },
+  [ROT_Z_PRIME - ROT_X] = { ROT_F_PRIME, ROT_S_PRIME, ROT_B       },
+};
+
+static Vector3
+layer_axis_vector (int axis_dim, int layer_idx)
+{
+  switch (axis_dim)
+    {
+    case AXIS_X: return (Vector3){ layer_idx, -1, -1 };
+    case AXIS_Y: return (Vector3){ -1, layer_idx, -1 };
+    case AXIS_Z: return (Vector3){ -1, -1, layer_idx };
+    }
+  return (Vector3){ -1, -1, -1 };
 }
 
 void
-Cube_rotate (Cube *cube, Rotation rotation, int numberOfLayers)
+cube_rotate (cube_t *cube, rotation_t rotation, int num_layers)
 {
-  switch (rotation)
+  if (rotation >= ROT_X && rotation <= ROT_Z_PRIME)
     {
-    case U:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, SIZE - i - 1, -1 }, cubie_rotate_left,
-                  false);
-        break;
-      }
-    case u:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, SIZE - i - 1, -1 }, cubie_rotate_right,
-                  true);
-        break;
-      }
-    case D:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, i, -1 }, cubie_rotate_right, true);
-        break;
-      }
-    case d:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, i, -1 }, cubie_rotate_left, false);
-        break;
-      }
-    case R:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ SIZE - i - 1, -1, -1 }, cubie_rotate_up,
-                  true);
-        break;
-      }
-    case r:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ SIZE - i - 1, -1, -1 }, cubie_rotate_down,
-                  false);
-        break;
-      }
-    case L:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ i, -1, -1 }, cubie_rotate_down, false);
-        break;
-      }
-    case l:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ i, -1, -1 }, cubie_rotate_up, true);
-        break;
-      }
-    case F:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, -1, SIZE - i - 1 },
-                  cubie_rotate_clockwise, true);
-        break;
-      }
-    case f:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, -1, SIZE - i - 1 },
-                  cubie_rotate_anticlockwise, false);
-        break;
-      }
-    case B:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, -1, i }, cubie_rotate_anticlockwise,
-                  false);
-        break;
-      }
-    case b:
-      {
-        for (int i = 0; i < numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, -1, i }, cubie_rotate_clockwise, true);
-        break;
-      }
-    case M:
-      {
-        for (int i = numberOfLayers; i < SIZE - numberOfLayers; i++)
-          rotate (cube, (Vector3){ i, -1, -1 }, cubie_rotate_down, false);
-        break;
-      }
-    case m:
-      {
-        for (int i = numberOfLayers; i < SIZE - numberOfLayers; i++)
-          rotate (cube, (Vector3){ i, -1, -1 }, cubie_rotate_up, true);
-        break;
-      }
-    case E:
-      {
-        for (int i = numberOfLayers; i < SIZE - numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, i, -1 }, cubie_rotate_right, true);
-        break;
-      }
-    case e:
-      {
-        for (int i = numberOfLayers; i < SIZE - numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, i, -1 }, cubie_rotate_left, false);
-        break;
-      }
-    case S:
-      {
-        for (int i = numberOfLayers; i < SIZE - numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, -1, i }, cubie_rotate_clockwise, true);
-        break;
-      }
-    case s:
-      {
-        for (int i = numberOfLayers; i < SIZE - numberOfLayers; i++)
-          rotate (cube, (Vector3){ -1, -1, i }, cubie_rotate_anticlockwise,
-                  false);
-        break;
-      }
-    case X:
-      {
-        Cube_rotate (cube, R, SIZE / 2);
-        Cube_rotate (cube, m, SIZE / 2);
-        Cube_rotate (cube, l, SIZE / 2);
-        break;
-      }
-    case x:
-      {
-        Cube_rotate (cube, r, SIZE / 2);
-        Cube_rotate (cube, M, SIZE / 2);
-        Cube_rotate (cube, L, SIZE / 2);
-        break;
-      }
-    case Y:
-      {
-        Cube_rotate (cube, U, SIZE / 2);
-        Cube_rotate (cube, e, SIZE / 2);
-        Cube_rotate (cube, d, SIZE / 2);
-        break;
-      }
-    case y:
-      {
-        Cube_rotate (cube, u, SIZE / 2);
-        Cube_rotate (cube, E, SIZE / 2);
-        Cube_rotate (cube, D, SIZE / 2);
-        break;
-      }
-    case Z:
-      {
-        Cube_rotate (cube, F, SIZE / 2);
-        Cube_rotate (cube, S, SIZE / 2);
-        Cube_rotate (cube, b, SIZE / 2);
-        break;
-      }
-    case z:
-      {
-        Cube_rotate (cube, f, SIZE / 2);
-        Cube_rotate (cube, s, SIZE / 2);
-        Cube_rotate (cube, B, SIZE / 2);
-        break;
-      }
+      const rotation_t *parts = WHOLE_CUBE_DECOMPOSITION[rotation - ROT_X];
+      int half = cube->size / 2;
+      for (int k = 0; k < 3; k++)
+        cube_rotate (cube, parts[k], half);
+      return;
+    }
+
+  if (rotation < 0 || rotation >= (int)(sizeof (LAYER_ROTATIONS) / sizeof (LAYER_ROTATIONS[0])))
+    return;
+  const layer_rotation_def_t *def = &LAYER_ROTATIONS[rotation];
+
+  int size = cube->size;
+  int start = (def->iter == LAYER_ITER_MIDDLE) ? num_layers : 0;
+  int end = (def->iter == LAYER_ITER_MIDDLE) ? size - num_layers : num_layers;
+
+  for (int i = start; i < end; i++)
+    {
+      int layer_idx = (def->iter == LAYER_ITER_FROM_LAST) ? size - i - 1 : i;
+      Vector3 dir = layer_axis_vector (def->axis_dim, layer_idx);
+      rotate_layer (cube, dir, def->cubie_rotation, def->anti_clockwise);
     }
 }
 
-char
-Cube_getFaceFromColor (cubie_t cubie, face_t face)
+/*----------------------------------------------------------------*/
+/* Facelet string serialization                                   */
+
+static char
+face_letter_from_color (cubie_t cubie, face_t face)
 {
   Color color = cubie.colors[face];
-
-  if (colors_equal (color, WHITE))
-    return 'U';
-  else if (colors_equal (color, GREEN))
-    return 'F';
-  else if (colors_equal (color, RED))
-    return 'R';
-  else if (colors_equal (color, BLUE))
-    return 'B';
-  else if (colors_equal (color, ORANGE))
-    return 'L';
-  else if (colors_equal (color, YELLOW))
-    return 'D';
-  else
-    return '?';
+  if (colors_equal (color, WHITE))  return 'U';
+  if (colors_equal (color, GREEN))  return 'F';
+  if (colors_equal (color, RED))    return 'R';
+  if (colors_equal (color, BLUE))   return 'B';
+  if (colors_equal (color, ORANGE)) return 'L';
+  if (colors_equal (color, YELLOW)) return 'D';
+  return '?';
 }
 
-char *
-Cube_toString (Cube *cube, char cubeStr[55])
+void
+cube_to_string (const cube_t *cube, char *out, size_t out_size)
 {
-  int index = 0;
-  for (int z = 0; z < SIZE; z++)
-    for (int x = 0; x < SIZE; x++)
-      {
-        cubeStr[index]
-            = Cube_getFaceFromColor (cube->cube[x][SIZE - 1][z], FACE_UP);
-        index++;
-      }
-  for (int x = SIZE - 1; x >= 0; x--)
-    for (int z = SIZE - 1; z >= 0; z--)
-      {
-        cubeStr[index]
-            = Cube_getFaceFromColor (cube->cube[SIZE - 1][x][z], FACE_RIGHT);
-        index++;
-      }
-  for (int z = SIZE - 1; z >= 0; z--)
-    for (int x = 0; x < SIZE; x++)
-      {
-        cubeStr[index]
-            = Cube_getFaceFromColor (cube->cube[x][z][SIZE - 1], FACE_FRONT);
-        index++;
-      }
-  for (int z = SIZE - 1; z >= 0; z--)
-    for (int x = 0; x < SIZE; x++)
-      {
-        cubeStr[index] = Cube_getFaceFromColor (cube->cube[x][0][z], FACE_DOWN);
-        index++;
-      }
-  for (int x = SIZE - 1; x >= 0; x--)
-    for (int z = 0; z < SIZE; z++)
-      {
-        cubeStr[index] = Cube_getFaceFromColor (cube->cube[0][x][z], FACE_LEFT);
-        index++;
-      }
-  for (int z = SIZE - 1; z >= 0; z--)
-    for (int x = SIZE - 1; x >= 0; x--)
-      {
-        cubeStr[index] = Cube_getFaceFromColor (cube->cube[x][z][0], FACE_BACK);
-        index++;
-      }
-  cubeStr[index] = '\0';
-  return cubeStr;
+  if (out_size < CUBE_FACELET_STR_LEN)
+    {
+      if (out_size > 0)
+        out[0] = '\0';
+      return;
+    }
+
+  int size = cube->size;
+  int idx = 0;
+  for (int z = 0; z < size; z++)
+    for (int x = 0; x < size; x++)
+      out[idx++] = face_letter_from_color (cube->cube[x][size - 1][z],
+                                           FACE_UP);
+  for (int x = size - 1; x >= 0; x--)
+    for (int z = size - 1; z >= 0; z--)
+      out[idx++] = face_letter_from_color (cube->cube[size - 1][x][z],
+                                           FACE_RIGHT);
+  for (int z = size - 1; z >= 0; z--)
+    for (int x = 0; x < size; x++)
+      out[idx++] = face_letter_from_color (cube->cube[x][z][size - 1],
+                                           FACE_FRONT);
+  for (int z = size - 1; z >= 0; z--)
+    for (int x = 0; x < size; x++)
+      out[idx++] = face_letter_from_color (cube->cube[x][0][z], FACE_DOWN);
+  for (int x = size - 1; x >= 0; x--)
+    for (int z = 0; z < size; z++)
+      out[idx++] = face_letter_from_color (cube->cube[0][x][z], FACE_LEFT);
+  for (int z = size - 1; z >= 0; z--)
+    for (int x = size - 1; x >= 0; x--)
+      out[idx++] = face_letter_from_color (cube->cube[x][z][0], FACE_BACK);
+  out[idx] = '\0';
 }
 
 /*----------------------------------------------------------------*/
+/* Whole-cube orientation detection and normalization             */
 
-static const Color CANONICAL_COLOR[6] = {
-  [FACE_UP] = WHITE,   [FACE_FRONT] = GREEN, [FACE_RIGHT] = RED,
-  [FACE_BACK] = BLUE,  [FACE_LEFT] = ORANGE, [FACE_DOWN] = YELLOW,
+static const Color CANONICAL_COLOR[FACE_COUNT] = {
+  [FACE_UP]    = WHITE,
+  [FACE_FRONT] = GREEN,
+  [FACE_RIGHT] = RED,
+  [FACE_BACK]  = BLUE,
+  [FACE_LEFT]  = ORANGE,
+  [FACE_DOWN]  = YELLOW,
 };
 
 static Color
-worldCenterColor (Cube *cube, face_t face)
+world_center_color (const cube_t *cube, face_t face)
 {
-  int mid = SIZE / 2;
+  int mid = cube->size / 2;
+  int max = cube->size - 1;
   switch (face)
     {
-    case FACE_UP:    return cube->cube[mid][SIZE - 1][mid].colors[FACE_UP];
+    case FACE_UP:    return cube->cube[mid][max][mid].colors[FACE_UP];
     case FACE_DOWN:  return cube->cube[mid][0][mid].colors[FACE_DOWN];
-    case FACE_FRONT: return cube->cube[mid][mid][SIZE - 1].colors[FACE_FRONT];
+    case FACE_FRONT: return cube->cube[mid][mid][max].colors[FACE_FRONT];
     case FACE_BACK:  return cube->cube[mid][mid][0].colors[FACE_BACK];
     case FACE_LEFT:  return cube->cube[0][mid][mid].colors[FACE_LEFT];
-    case FACE_RIGHT: return cube->cube[SIZE - 1][mid][mid].colors[FACE_RIGHT];
+    case FACE_RIGHT: return cube->cube[max][mid][mid].colors[FACE_RIGHT];
     }
   return BLACK;
 }
 
 static face_t
-findWorldFaceShowing (Cube *cube, Color target)
+find_world_face_showing (const cube_t *cube, Color target)
 {
-  face_t all[6] = { FACE_UP, FACE_FRONT, FACE_RIGHT, FACE_BACK, FACE_LEFT, FACE_DOWN };
-  for (int i = 0; i < 6; i++)
-    if (colors_equal (worldCenterColor (cube, all[i]), target))
+  static const face_t all[FACE_COUNT] = {
+    FACE_UP, FACE_FRONT, FACE_RIGHT, FACE_BACK, FACE_LEFT, FACE_DOWN,
+  };
+  for (int i = 0; i < FACE_COUNT; i++)
+    if (colors_equal (world_center_color (cube, all[i]), target))
       return all[i];
   return FACE_UP;
 }
 
-CubeOrientation
-Cube_detectOrientationAndNormalize (Cube *src, Cube *outCanonical)
+cube_orientation_t
+cube_detect_orientation_and_normalize (const cube_t *src,
+                                       cube_t *out_canonical)
 {
-  CubeOrientation o = { .count = 0 };
-  for (int f = 0; f < 6; f++)
-    o.faceMap[f] = findWorldFaceShowing (src, CANONICAL_COLOR[f]);
+  cube_orientation_t o = { .count = 0 };
+  for (int f = 0; f < FACE_COUNT; f++)
+    o.face_map[f] = find_world_face_showing (src, CANONICAL_COLOR[f]);
 
-  *outCanonical = Cube_deepCopy (src);
+  *out_canonical = cube_deep_copy (src);
 
-  face_t whitePos = findWorldFaceShowing (outCanonical, WHITE);
-  switch (whitePos)
+  face_t white_pos = find_world_face_showing (out_canonical, WHITE);
+  switch (white_pos)
     {
     case FACE_UP:
       break;
     case FACE_FRONT:
-      Cube_rotate (outCanonical, X, SIZE / 2);
-      o.moves[o.count++] = X;
+      cube_rotate (out_canonical, ROT_X, out_canonical->size / 2);
+      o.moves[o.count++] = ROT_X;
       break;
     case FACE_BACK:
-      Cube_rotate (outCanonical, x, SIZE / 2);
-      o.moves[o.count++] = x;
+      cube_rotate (out_canonical, ROT_X_PRIME, out_canonical->size / 2);
+      o.moves[o.count++] = ROT_X_PRIME;
       break;
     case FACE_LEFT:
-      Cube_rotate (outCanonical, Z, SIZE / 2);
-      o.moves[o.count++] = Z;
+      cube_rotate (out_canonical, ROT_Z, out_canonical->size / 2);
+      o.moves[o.count++] = ROT_Z;
       break;
     case FACE_RIGHT:
-      Cube_rotate (outCanonical, z, SIZE / 2);
-      o.moves[o.count++] = z;
+      cube_rotate (out_canonical, ROT_Z_PRIME, out_canonical->size / 2);
+      o.moves[o.count++] = ROT_Z_PRIME;
       break;
     case FACE_DOWN:
-      Cube_rotate (outCanonical, X, SIZE / 2);
-      Cube_rotate (outCanonical, X, SIZE / 2);
-      o.moves[o.count++] = X;
-      o.moves[o.count++] = X;
+      cube_rotate (out_canonical, ROT_X, out_canonical->size / 2);
+      cube_rotate (out_canonical, ROT_X, out_canonical->size / 2);
+      o.moves[o.count++] = ROT_X;
+      o.moves[o.count++] = ROT_X;
       break;
     }
 
-  face_t greenPos = findWorldFaceShowing (outCanonical, GREEN);
-  switch (greenPos)
+  face_t green_pos = find_world_face_showing (out_canonical, GREEN);
+  switch (green_pos)
     {
     case FACE_FRONT:
       break;
     case FACE_RIGHT:
-      Cube_rotate (outCanonical, Y, SIZE / 2);
-      o.moves[o.count++] = Y;
+      cube_rotate (out_canonical, ROT_Y, out_canonical->size / 2);
+      o.moves[o.count++] = ROT_Y;
       break;
     case FACE_LEFT:
-      Cube_rotate (outCanonical, y, SIZE / 2);
-      o.moves[o.count++] = y;
+      cube_rotate (out_canonical, ROT_Y_PRIME, out_canonical->size / 2);
+      o.moves[o.count++] = ROT_Y_PRIME;
       break;
     case FACE_BACK:
-      Cube_rotate (outCanonical, Y, SIZE / 2);
-      Cube_rotate (outCanonical, Y, SIZE / 2);
-      o.moves[o.count++] = Y;
-      o.moves[o.count++] = Y;
+      cube_rotate (out_canonical, ROT_Y, out_canonical->size / 2);
+      cube_rotate (out_canonical, ROT_Y, out_canonical->size / 2);
+      o.moves[o.count++] = ROT_Y;
+      o.moves[o.count++] = ROT_Y;
       break;
     default:
       break;
@@ -701,31 +605,31 @@ Cube_detectOrientationAndNormalize (Cube *src, Cube *outCanonical)
 }
 
 static char
-rotationLetter (Rotation r)
+rotation_letter (rotation_t r)
 {
   switch (r)
     {
-    case X: case x: return 'X';
-    case Y: case y: return 'Y';
-    case Z: case z: return 'Z';
-    default:        return '?';
+    case ROT_X: case ROT_X_PRIME: return 'X';
+    case ROT_Y: case ROT_Y_PRIME: return 'Y';
+    case ROT_Z: case ROT_Z_PRIME: return 'Z';
+    default:                       return '?';
     }
 }
 
 static bool
-rotationIsInverse (Rotation r)
+rotation_is_inverse (rotation_t r)
 {
-  return r == x || r == y || r == z;
+  return r == ROT_X_PRIME || r == ROT_Y_PRIME || r == ROT_Z_PRIME;
 }
 
 void
-Cube_appendNormalizationTokens (char *buf, const CubeOrientation *o)
+cube_append_normalization_tokens (char *buf, const cube_orientation_t *o)
 {
-  int len = strlen (buf);
+  size_t len = strlen (buf);
   for (int i = 0; i < o->count;)
     {
-      Rotation r = o->moves[i];
-      char letter = rotationLetter (r);
+      rotation_t r = o->moves[i];
+      char letter = rotation_letter (r);
       if (i + 1 < o->count && o->moves[i + 1] == r)
         {
           buf[len++] = letter;
@@ -736,7 +640,7 @@ Cube_appendNormalizationTokens (char *buf, const CubeOrientation *o)
       else
         {
           buf[len++] = letter;
-          if (rotationIsInverse (r))
+          if (rotation_is_inverse (r))
             buf[len++] = '\'';
           buf[len++] = ' ';
           i++;
@@ -746,9 +650,9 @@ Cube_appendNormalizationTokens (char *buf, const CubeOrientation *o)
 }
 
 char
-Cube_faceLetter (face_t f)
+cube_face_letter (face_t face)
 {
-  switch (f)
+  switch (face)
     {
     case FACE_UP:    return 'U';
     case FACE_RIGHT: return 'R';
@@ -760,16 +664,10 @@ Cube_faceLetter (face_t f)
   return '?';
 }
 
-/* Rotation enum is laid out as 12 (uppercase, lowercase) pairs:
- * U/u, D/d, R/r, L/l, F/f, B/b, M/m, E/e, S/s, X/x, Y/y, Z/z. The
- * lowercase form is the inverse, rendered as a primed token. 
-*/
 void
-Cube_rotationToken (Rotation r, char out[3])
+cube_rotation_token (rotation_t r, char out[3])
 {
-  static const char letters[12]
-      = { 'U', 'D', 'R', 'L', 'F', 'B', 'M', 'E', 'S', 'X', 'Y', 'Z' };
-  out[0] = letters[r / 2];
+  out[0] = ROTATION_LETTERS[r / 2];
   if (r % 2 == 1)
     {
       out[1] = '\'';

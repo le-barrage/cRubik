@@ -41,7 +41,7 @@ float camera_phi;
 
 Camera camera = { { 0 }, { 0, 0, 0 }, { 0, 1, 0 }, 90, CAMERA_PERSPECTIVE };
 
-Cube cube;
+cube_t cube;
 char **scramble, *currentScramble, currentSolution[100], solutionFoundText[45],
     times[LAST_N_SOLVES][TIME_STR_MAX], avg[AVG_STR_LEN];
 int currentSolutionSize;
@@ -126,7 +126,7 @@ int timeToShow = -1, posYToShow = 0;
 bool exitProgram = false;
 
 void
-handleRotation (Rotation clockwise, Rotation antiClockwise)
+handleRotation (rotation_t clockwise, rotation_t antiClockwise)
 {
   if (isSolutionRunning)
     return;
@@ -141,10 +141,10 @@ handleRotation (Rotation clockwise, Rotation antiClockwise)
 void
 applyMovesAndUpdateCurrentScramble ()
 {
-  int length = scramble_length (SIZE);
+  int length = scramble_length (cube.size);
   for (int i = 0; i < length; i++)
     {
-      Cube_applyMove (&cube, scramble[i]);
+      cube_apply_move (&cube, scramble[i]);
       if (scramble[i][0] == '1' && scramble[i][1] == 'w')
         strcat (currentScramble, scramble[i] + 2);
       else
@@ -156,15 +156,15 @@ applyMovesAndUpdateCurrentScramble ()
 }
 
 int
-findSolutionAndUpdateMoves (Cube *cube, int depthLimit, int timeOut)
+findSolutionAndUpdateMoves (cube_t *cube, int depthLimit, int timeOut)
 {
-  Cube canonical;
-  CubeOrientation orientation
-      = Cube_detectOrientationAndNormalize (cube, &canonical);
+  cube_t canonical;
+  cube_orientation_t orientation
+      = cube_detect_orientation_and_normalize (cube, &canonical);
 
-  char cubeStr[55];
-  Cube_toString (&canonical, cubeStr);
-  Cube_free (canonical);
+  char cubeStr[CUBE_FACELET_STR_LEN];
+  cube_to_string (&canonical, cubeStr, sizeof cubeStr);
+  cube_destroy (&canonical);
 
   Move moves[25] = { 0 };
   int depth;
@@ -175,16 +175,16 @@ findSolutionAndUpdateMoves (Cube *cube, int depthLimit, int timeOut)
   currentSolution[0] = '\0';
 
   if (solverOutputMode == SOLVER_REORIENT)
-    Cube_appendNormalizationTokens (currentSolution, &orientation);
+    cube_append_normalization_tokens (currentSolution, &orientation);
 
   int len = strlen (currentSolution);
   for (int i = 0; i < depth; i++)
     {
       Move cur = moves[i];
       face_t emitFace = (solverOutputMode == SOLVER_PRESERVE)
-                          ? orientation.faceMap[cur.orientation]
+                          ? orientation.face_map[cur.orientation]
                           : cur.orientation;
-      currentSolution[len++] = Cube_faceLetter (emitFace);
+      currentSolution[len++] = cube_face_letter (emitFace);
       if (cur.direction == ANTICW)
         currentSolution[len++] = '\'';
       else if (cur.direction == HALF)
@@ -202,7 +202,7 @@ void *
 findSolutionAndUpdateCurrentSolution (void *arg)
 {
   (void)arg;
-  if (SIZE != 3)
+  if (cube.size != 3)
     {
       snprintf (currentSolution, 41,
                 "The algorithm only works on 3x3x3 cubes.");
@@ -247,7 +247,7 @@ clearCurrentScrambleAndSolution ()
 void
 resetAnimationAndSolution ()
 {
-  cube.isAnimating = false;
+  cube.is_animating = false;
   queue_clear (queue);
 }
 
@@ -256,9 +256,10 @@ generateNewScramble ()
 {
   clearCurrentScrambleAndSolution ();
   resetAnimationAndSolution ();
-  Cube_free (cube);
-  cube = Cube_make (CUBIE_SIZE);
-  if (scramble_generate (scramble, scramble_length (SIZE), SIZE)
+  int size = cube.size;
+  cube_destroy (&cube);
+  cube = cube_make (size, CUBIE_SIZE);
+  if (scramble_generate (scramble, scramble_length (size), size)
       != SCRAMBLE_OK)
     {
       fprintf (stderr, "scramble_generate failed\n");
@@ -271,17 +272,17 @@ generateNewScramble ()
 void
 initCameraSettings ()
 {
-  camera_mag = 2 * SIZE;
+  camera_mag = 2 * cube.size;
   camera_mag_vel = 0.0f;
   camera_theta = PI / 5;
   camera_phi = PI / 3;
 }
 
 void
-initCurrentScrambleAndSolution ()
+initCurrentScrambleAndSolution (int size)
 {
-  cube = Cube_make (CUBIE_SIZE);
-  int length = scramble_length (SIZE);
+  cube = cube_make (size, CUBIE_SIZE);
+  int length = scramble_length (size);
   scramble = malloc (length * sizeof (char *));
   currentScramble = malloc ((6 * length + 1) * sizeof (char));
   clearCurrentScrambleAndSolution ();
@@ -292,19 +293,18 @@ initCurrentScrambleAndSolution ()
 void
 resizeCube (int increment)
 {
+  int new_size = cube.size;
+  if (!((new_size == CUBE_MAX_SIZE && increment > 0)
+        || (new_size == 1 && increment < 0)))
+    new_size += increment;
+
   free (currentScramble);
   free (scramble);
-  Cube_free (cube);
+  cube_destroy (&cube);
 
-  SIZE += (SIZE == MAXSIZE && increment > 0) || (SIZE == 1 && increment < 0)
-              ? 0
-              : increment;
-
-  initCurrentScrambleAndSolution ();
-
+  initCurrentScrambleAndSolution (new_size);
   initCameraSettings ();
-
-  solves_load_last_5 (times, SIZE);
+  solves_load_last_5 (times, new_size);
 }
 
 // TODO: Make this function more readable (change if)
@@ -334,7 +334,9 @@ applyCurrentSolution ()
         }
       else if (nextMove == '2')
         {
-          queue_push (queue, getCorrespondingRotation (currMove));
+          rotation_t r;
+          if (rotation_from_char (currMove, &r))
+            queue_push (queue, r);
           rotation = currMove;
           i++;
         }
@@ -342,7 +344,9 @@ applyCurrentSolution ()
         {
           rotation = currMove;
         }
-      queue_push (queue, getCorrespondingRotation (rotation));
+      rotation_t r;
+      if (rotation_from_char (rotation, &r))
+        queue_push (queue, r);
       i++;
     }
 }
@@ -361,8 +365,8 @@ handleKeyPress ()
     {
       timer_stop (&timer);
       updateTimerString ();
-      solves_save (timerString, currentScramble, SIZE);
-      solves_load_last_5 (times, SIZE);
+      solves_save (timerString, currentScramble, cube.size);
+      solves_load_last_5 (times, cube.size);
       solves_average_of_5 (times, avg);
       generateNewScramble ();
       timer.just_stopped = false;
@@ -370,29 +374,29 @@ handleKeyPress ()
       return;
     }
   if (IsKeyPressed (keybindings.key_U))
-    handleRotation (U, u);
+    handleRotation (ROT_U, ROT_U_PRIME);
   else if (IsKeyPressed (keybindings.key_D))
-    handleRotation (D, d);
+    handleRotation (ROT_D, ROT_D_PRIME);
   else if (IsKeyPressed (keybindings.key_L))
-    handleRotation (L, l);
+    handleRotation (ROT_L, ROT_L_PRIME);
   else if (IsKeyPressed (keybindings.key_R))
-    handleRotation (R, r);
+    handleRotation (ROT_R, ROT_R_PRIME);
   else if (IsKeyPressed (keybindings.key_F))
-    handleRotation (F, f);
+    handleRotation (ROT_F, ROT_F_PRIME);
   else if (IsKeyPressed (keybindings.key_B))
-    handleRotation (B, b);
+    handleRotation (ROT_B, ROT_B_PRIME);
   else if (IsKeyPressed (keybindings.key_M))
-    handleRotation (M, m);
+    handleRotation (ROT_M, ROT_M_PRIME);
   else if (IsKeyPressed (keybindings.key_E))
-    handleRotation (E, e);
+    handleRotation (ROT_E, ROT_E_PRIME);
   else if (IsKeyPressed (keybindings.key_S))
-    handleRotation (S, s);
+    handleRotation (ROT_S, ROT_S_PRIME);
   else if (IsKeyPressed (keybindings.key_X))
-    handleRotation (X, x);
+    handleRotation (ROT_X, ROT_X_PRIME);
   else if (IsKeyPressed (keybindings.key_Y))
-    handleRotation (Y, y);
+    handleRotation (ROT_Y, ROT_Y_PRIME);
   else if (IsKeyPressed (keybindings.key_Z))
-    handleRotation (Z, z);
+    handleRotation (ROT_Z, ROT_Z_PRIME);
   else if (IsKeyPressed (KEY_ENTER))
     generateNewScramble ();
   else if (IsKeyPressed (KEY_K))
@@ -453,7 +457,7 @@ handleKeyPress ()
 void
 handleQueue ()
 {
-  if (cube.isAnimating)
+  if (cube.is_animating)
     return;
   if (queue_is_empty (queue))
     {
@@ -470,11 +474,11 @@ handleQueue ()
         }
       return;
     }
-  Rotation popped;
+  rotation_t popped;
   if (queue_pop (queue, &popped) != QUEUE_OK)
     return;
-  cube.isAnimating = true;
-  cube.currentRotation = popped;
+  cube.is_animating = true;
+  cube.current_rotation = popped;
   if (playback.active)
     {
       if (playback.popsRemaining <= 0)
@@ -493,8 +497,9 @@ handleMouseMovementAndUpdateCamera ()
 {
   if (IsMouseButtonPressed (MOUSE_BUTTON_RIGHT))
     {
-      Cube_free (cube);
-      cube = Cube_make (CUBIE_SIZE);
+      int size = cube.size;
+      cube_destroy (&cube);
+      cube = cube_make (size, CUBIE_SIZE);
       clearCurrentScrambleAndSolution ();
       resetAnimationAndSolution ();
     }
@@ -506,10 +511,10 @@ handleMouseMovementAndUpdateCamera ()
   float dt = GetFrameTime ();
 
   camera_mag += camera_mag_vel * dt;
-  if (camera_mag < 1.25f * SIZE)
-    camera_mag = 1.25f * SIZE;
-  if (camera_mag > 2.5f * SIZE)
-    camera_mag = 2.5f * SIZE;
+  if (camera_mag < 1.25f * cube.size)
+    camera_mag = 1.25f * cube.size;
+  if (camera_mag > 2.5f * cube.size)
+    camera_mag = 2.5f * cube.size;
   camera_mag_vel -= GetMouseWheelMove () * 10;
   camera_mag_vel *= 0.9;
 
@@ -598,7 +603,7 @@ drawPatternsScreen ()
                 {
                   queue_push (queue, PATTERNS[i].moves[j]);
                   char tok[3];
-                  Cube_rotationToken (PATTERNS[i].moves[j], tok);
+                  cube_rotation_token (PATTERNS[i].moves[j], tok);
                   size_t tokLen = strlen (tok);
                   size_t needed = (j > 0 ? 1 : 0) + tokLen;
                   if (pos + needed + 1 >= sizeof (patternText))
@@ -640,15 +645,14 @@ drawPatternsScreen ()
  * If we placed an overlay piece at lineX + MeasureText(prefix) directly,
  * the piece would land `spacing` pixels too far left.
  *
- * `spacing` follows raylib's DrawText default: fontSize/10, clamped >= 1. 
-*/
+ * `spacing` follows raylib's DrawText default: fontSize/10, clamped >= 1. */
 static int
 drawTextCursorAfter (const char *s, int fontSize)
 {
   int spacing = fontSize / 10;
   if (spacing < 1)
     spacing = 1;
-  return MeasureText(s, fontSize) + spacing;
+  return MeasureText (s, fontSize) + spacing;
 }
 
 /* Renders a space-separated token sequence with greedy line wrapping at the
@@ -656,8 +660,7 @@ drawTextCursorAfter (const char *s, int fontSize)
  * always drawn once in BLACK; if a token in this line is highlighted, that
  * token is overlaid in GOLD at the cursor-advance position after the prefix.
  * raylib's default font is a non-AA bitmap, so the overlay replaces pixels
- * cleanly. 
-*/
+ * cleanly. */
 void
 DrawMoves (const char *text, float fontSize, int y, int highlightToken)
 {
@@ -773,13 +776,13 @@ drawCubeScreen ()
   BeginMode3D (camera);
   ClearBackground (BACKGROUND_COLOR);
 
-  DrawLine3D (Vector3Zero (), (Vector3){ (float)SIZE / 2 + 2, 0, 0 }, WHITE);
-  DrawLine3D (Vector3Zero (), (Vector3){ 0, (float)SIZE / 2 + 2, 0 }, WHITE);
-  DrawLine3D (Vector3Zero (), (Vector3){ 0, 0, (float)SIZE / 2 + 2 }, WHITE);
-  // DrawCube ((Vector3){ 0 }, SIZE - (1 - CUBIE_SIZE) - 0.05,
-  //           SIZE - (1 - CUBIE_SIZE) - 0.05, SIZE - (1 - CUBIE_SIZE) - 0.05,
+  DrawLine3D (Vector3Zero (), (Vector3){ (float)cube.size / 2 + 2, 0, 0 }, WHITE);
+  DrawLine3D (Vector3Zero (), (Vector3){ 0, (float)cube.size / 2 + 2, 0 }, WHITE);
+  DrawLine3D (Vector3Zero (), (Vector3){ 0, 0, (float)cube.size / 2 + 2 }, WHITE);
+  // DrawCube ((Vector3){ 0 }, cube.size - (1 - CUBIE_SIZE) - 0.05,
+  //           cube.size - (1 - CUBIE_SIZE) - 0.05, cube.size - (1 - CUBIE_SIZE) - 0.05,
   //           BLACK);
-  Cube_drawCube (&cube);
+  cube_draw (&cube, options_rotation_speed ());
   EndMode3D ();
 
   DrawText ("Press 'h' for help.", 10, 10, DEFAULT_FONT_SIZE, DARKGRAY);
@@ -846,15 +849,15 @@ drawCubeScreen ()
         show = !show;
       else if (result == 2)
         {
-          solves_toggle_plus_two (timeToShow, SIZE);
-          solves_load_last_5 (times, SIZE);
+          solves_toggle_plus_two (timeToShow, cube.size);
+          solves_load_last_5 (times, cube.size);
           solves_average_of_5 (times, avg);
           show = !show;
         }
       else if (result == 3)
         {
-          solves_toggle_dnf (timeToShow, SIZE);
-          solves_load_last_5 (times, SIZE);
+          solves_toggle_dnf (timeToShow, cube.size);
+          solves_load_last_5 (times, cube.size);
           solves_average_of_5 (times, avg);
           show = !show;
         }
@@ -928,7 +931,6 @@ initEverything (void *arg)
 
   keybindings_init ();
   Options_load ();
-  initCameraSettings ();
   queue = queue_create ();
   if (queue == NULL)
     {
@@ -936,9 +938,9 @@ initEverything (void *arg)
       exit (1);
     }
 
-  solves_load_last_5 (times, SIZE);
-
-  initCurrentScrambleAndSolution ();
+  initCurrentScrambleAndSolution (CUBE_DEFAULT_SIZE);
+  initCameraSettings ();
+  solves_load_last_5 (times, cube.size);
 
   int max = 0;
   for (int i = 0; i < helpTextsSize; i++)
@@ -1051,7 +1053,7 @@ main (int argc, char **argv)
 
   free (currentScramble);
   free (scramble);
-  Cube_free (cube);
+  cube_destroy (&cube);
   queue_destroy (queue);
 
   CloseWindow ();

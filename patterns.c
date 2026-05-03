@@ -2,28 +2,28 @@
 
 #include "utils.h"
 
-static const Rotation SUPERFLIP[]
-    = { m, u, m, u, m, u, m, u, X, Y, m, u, m, u, m,
-        u, m, u, X, Y, m, u, m, u, m, u, m, u, X, Y };
+static const rotation_t SUPERFLIP[]
+    = { ROT_M_PRIME, ROT_U_PRIME, ROT_M_PRIME, ROT_U_PRIME, ROT_M_PRIME, ROT_U_PRIME, ROT_M_PRIME, ROT_U_PRIME, ROT_X, ROT_Y, ROT_M_PRIME, ROT_U_PRIME, ROT_M_PRIME, ROT_U_PRIME, ROT_M_PRIME,
+        ROT_U_PRIME, ROT_M_PRIME, ROT_U_PRIME, ROT_X, ROT_Y, ROT_M_PRIME, ROT_U_PRIME, ROT_M_PRIME, ROT_U_PRIME, ROT_M_PRIME, ROT_U_PRIME, ROT_M_PRIME, ROT_U_PRIME, ROT_X, ROT_Y };
 
-static const Rotation CHECKERBOARD[] = { m, m, e, e, s, s };
+static const rotation_t CHECKERBOARD[] = { ROT_M_PRIME, ROT_M_PRIME, ROT_E_PRIME, ROT_E_PRIME, ROT_S_PRIME, ROT_S_PRIME };
 
-static const Rotation CROSS[]
-    = { R, R, l, D, F, F, r, d, r, L, u, D, R, D, B, B, r, U, D, D };
+static const rotation_t CROSS[]
+    = { ROT_R, ROT_R, ROT_L_PRIME, ROT_D, ROT_F, ROT_F, ROT_R_PRIME, ROT_D_PRIME, ROT_R_PRIME, ROT_L, ROT_U_PRIME, ROT_D, ROT_R, ROT_D, ROT_B, ROT_B, ROT_R_PRIME, ROT_U, ROT_D, ROT_D };
 
-static const Rotation FOUR_CROSSES[]
-    = { U, U, R, R, L, L, F, F, B, B, D, D, L, L, R, R, F, F, B, B };
+static const rotation_t FOUR_CROSSES[]
+    = { ROT_U, ROT_U, ROT_R, ROT_R, ROT_L, ROT_L, ROT_F, ROT_F, ROT_B, ROT_B, ROT_D, ROT_D, ROT_L, ROT_L, ROT_R, ROT_R, ROT_F, ROT_F, ROT_B, ROT_B };
 
-static const Rotation CUBE_IN_CUBE[]
-    = { F, L, F, u, R, U, F, F, L, L, u, l, B, d, b, L, L, U };
+static const rotation_t CUBE_IN_CUBE[]
+    = { ROT_F, ROT_L, ROT_F, ROT_U_PRIME, ROT_R, ROT_U, ROT_F, ROT_F, ROT_L, ROT_L, ROT_U_PRIME, ROT_L_PRIME, ROT_B, ROT_D_PRIME, ROT_B_PRIME, ROT_L, ROT_L, ROT_U };
 
-static const Rotation CUBE_IN_CUBE_IN_CUBE[]
-    = { u, l, u, f, R, R, b, R, F, U, B, B, U, b, L, u, F, U, R, f };
+static const rotation_t CUBE_IN_CUBE_IN_CUBE[]
+    = { ROT_U_PRIME, ROT_L_PRIME, ROT_U_PRIME, ROT_F_PRIME, ROT_R, ROT_R, ROT_B_PRIME, ROT_R, ROT_F, ROT_U, ROT_B, ROT_B, ROT_U, ROT_B_PRIME, ROT_L, ROT_U_PRIME, ROT_F, ROT_U, ROT_R, ROT_F_PRIME };
 
-static const Rotation FOUR_SPOTS[]
-    = { F, F, B, B, U, d, R, R, L, L, U, d };
+static const rotation_t FOUR_SPOTS[]
+    = { ROT_F, ROT_F, ROT_B, ROT_B, ROT_U, ROT_D_PRIME, ROT_R, ROT_R, ROT_L, ROT_L, ROT_U, ROT_D_PRIME };
 
-static const Rotation SIX_SPOTS[] = { U, d, R, l, F, b, U, d };
+static const rotation_t SIX_SPOTS[] = { ROT_U, ROT_D_PRIME, ROT_R, ROT_L_PRIME, ROT_F, ROT_B_PRIME, ROT_U, ROT_D_PRIME };
 
 #define PATTERN_ENTRY(arr, n) \
   { .moves = (arr), .move_count = ARRAY_LEN (arr), .name = (n) }
