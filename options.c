@@ -1,5 +1,4 @@
 #include "options.h"
-#include "cube.h"
 #include "include/cJSON.h"
 #include "include/raygui.h"
 #include "include/raylib.h"
@@ -12,13 +11,53 @@
 #define OPTIONS_FILE "options.json"
 #define OPTIONS_VERSION 1
 
-#define BACKGROUND_COLOR GRAY
+#define OPTIONS_BG_COLOR GRAY
 
 #define DEFAULT_ROTATION_SPEED 25
-#define DEFAULT_SOLVER_OUTPUT_MODE SOLVER_REORIENT
+#define MIN_ROTATION_SPEED 1
+#define MAX_ROTATION_SPEED 30
+#define DEFAULT_SOLVER_MODE OPTIONS_SOLVER_REORIENT
 
-SolverOutputMode solverOutputMode = DEFAULT_SOLVER_OUTPUT_MODE;
+#define KEYBIND_SECTION_Y       60
+#define KEYBIND_TITLE_GAP       40
+#define KEYBIND_BUTTON_WIDTH    120
+#define KEYBIND_BUTTON_HEIGHT   35
+#define KEYBIND_LABEL_WIDTH     50
+#define KEYBIND_SPACING         15
+#define KEYBIND_COLUMNS         3
+
+#define SLIDER_Y          450
+#define SLIDER_WIDTH      150
+#define SLIDER_HEIGHT     30
+#define SLIDER_LABEL_GAP  30
+#define SLIDER_VALUE_GAP  10
+
+#define TOGGLE_Y            550
+#define TOGGLE_GROUP_WIDTH  280
+#define TOGGLE_HEIGHT       30
+#define TOGGLE_LABEL_GAP    30
+
+#define RESET_BUTTON_HEIGHT     35
+#define RESET_BUTTON_PADDING_X  20
+#define RESET_BUTTON_BOTTOM_Y   60
+
+#define EXIT_TEXT_MARGIN  10
+
+/* Empirical color tweaks: lighten for the resting state, darken on hover. */
+#define HOVER_DARKEN  -0.1f
+#define REST_LIGHTEN   0.1f
+
+/* JSON keys are storage format. Do not rename without a migration. */
+#define JSON_KEY_VERSION       "version"
+#define JSON_KEY_ROTATION      "rotationSpeed"
+#define JSON_KEY_SOLVER_MODE   "solverOutputMode"
+#define JSON_KEY_KEYBINDINGS   "keybindings"
+#define JSON_VAL_PRESERVE      "preserve"
+#define JSON_VAL_REORIENT      "reorient"
+
 static int rotation_speed = DEFAULT_ROTATION_SPEED;
+static options_solver_mode_t solver_mode = DEFAULT_SOLVER_MODE;
+static int editing_key_index = -1;
 
 int
 options_rotation_speed (void)
@@ -26,15 +65,19 @@ options_rotation_speed (void)
   return rotation_speed;
 }
 
-static int editingKeyIndex = -1;
+options_solver_mode_t
+options_solver_mode (void)
+{
+  return solver_mode;
+}
 
 typedef struct
 {
   const char *name;
-  int *keyPtr;
-} KeyBindingEntry;
+  int *key_ptr;
+} keybinding_entry_t;
 
-static const KeyBindingEntry keyBindingEntries[] = {
+static const keybinding_entry_t KEYBINDING_ENTRIES[] = {
   { "R",   &keybindings.key_R   },
   { "L",   &keybindings.key_L   },
   { "U",   &keybindings.key_U   },
@@ -49,224 +92,276 @@ static const KeyBindingEntry keyBindingEntries[] = {
   { "Z",   &keybindings.key_Z   },
   { "CCW", &keybindings.key_ALT },
 };
-#define KEY_BINDING_COUNT ARRAY_LEN (keyBindingEntries)
+#define KEYBINDING_COUNT ARRAY_LEN (KEYBINDING_ENTRIES)
 
 static bool
-drawKeyBindingsUI (int startY)
+draw_keybindings_ui (int start_y)
 {
-  int buttonWidth = 120;
-  int buttonHeight = 35;
-  int labelWidth = 50;
-  int spacing = 15;
-  int columns = 3;
-  int totalWidth = columns * (labelWidth + buttonWidth + spacing * 2);
-  int startX = (GetScreenWidth () - totalWidth) / 2;
+  int total_width
+      = KEYBIND_COLUMNS
+        * (KEYBIND_LABEL_WIDTH + KEYBIND_BUTTON_WIDTH + KEYBIND_SPACING * 2);
+  int start_x = (GetScreenWidth () - total_width) / 2;
 
   const char *title = "Key Bindings (click to change):";
-  int titleWidth = MeasureText (title, DEFAULT_FONT_SIZE);
-  DrawText (title, (GetScreenWidth () - titleWidth) / 2, startY,
+  int title_width = MeasureText (title, DEFAULT_FONT_SIZE);
+  DrawText (title, (GetScreenWidth () - title_width) / 2, start_y,
             DEFAULT_FONT_SIZE, BLACK);
 
-  startY += 40;
+  int row_y0 = start_y + KEYBIND_TITLE_GAP;
+  bool any_hover = false;
 
-  bool isHoveringButton = false;
-
-  for (int i = 0; i < (int)KEY_BINDING_COUNT; i++)
+  for (int i = 0; i < (int)KEYBINDING_COUNT; i++)
     {
-      int row = i / columns;
-      int col = i % columns;
-      int x = startX + col * (labelWidth + buttonWidth + spacing * 3);
-      int y = startY + row * (buttonHeight + spacing);
+      int row = i / KEYBIND_COLUMNS;
+      int col = i % KEYBIND_COLUMNS;
+      int x = start_x
+              + col
+                    * (KEYBIND_LABEL_WIDTH + KEYBIND_BUTTON_WIDTH
+                       + KEYBIND_SPACING * 3);
+      int y = row_y0 + row * (KEYBIND_BUTTON_HEIGHT + KEYBIND_SPACING);
 
-      DrawText (TextFormat ("%s:", keyBindingEntries[i].name), x,
-                y + (buttonHeight - DEFAULT_FONT_SIZE) / 2, DEFAULT_FONT_SIZE,
-                BLACK);
+      DrawText (TextFormat ("%s:", KEYBINDING_ENTRIES[i].name), x,
+                y + (KEYBIND_BUTTON_HEIGHT - DEFAULT_FONT_SIZE) / 2,
+                DEFAULT_FONT_SIZE, BLACK);
 
-      Rectangle button = (Rectangle){ .x = x + labelWidth,
-                                      .y = y,
-                                      .width = buttonWidth,
-                                      .height = buttonHeight };
+      Rectangle button = (Rectangle){
+        .x = x + KEYBIND_LABEL_WIDTH,
+        .y = y,
+        .width = KEYBIND_BUTTON_WIDTH,
+        .height = KEYBIND_BUTTON_HEIGHT,
+      };
 
-      bool isHovering = CheckCollisionPointRec (GetMousePosition (), button);
-      bool isEditing = (editingKeyIndex == i);
-      isHoveringButton |= isHovering;
+      bool hovering = CheckCollisionPointRec (GetMousePosition (), button);
+      bool editing = (editing_key_index == i);
+      any_hover |= hovering;
 
-      Color buttonColor;
-      if (isEditing)
-        buttonColor = GREEN;
-      else if (isHovering)
-        buttonColor = ColorBrightness (DARKGRAY, -0.1f);
+      Color color;
+      if (editing)
+        color = GREEN;
+      else if (hovering)
+        color = ColorBrightness (DARKGRAY, HOVER_DARKEN);
       else
-        buttonColor = ColorBrightness (DARKGRAY, 0.1f);
+        color = ColorBrightness (DARKGRAY, REST_LIGHTEN);
 
-      DrawRectangleRounded (button, 0.2f, 0, buttonColor);
+      DrawRectangleRounded (button, 0.2f, 0, color);
 
-      const char *keyText
-          = isEditing ? "Press key..."
-                      : keybindings_label (*keyBindingEntries[i].keyPtr);
+      const char *key_text
+          = editing ? "Press key..."
+                    : keybindings_label (*KEYBINDING_ENTRIES[i].key_ptr);
 
-      int textW = MeasureText (keyText, DEFAULT_FONT_SIZE);
-      DrawText (keyText, button.x + (button.width - textW) / 2,
+      int text_w = MeasureText (key_text, DEFAULT_FONT_SIZE);
+      DrawText (key_text, button.x + (button.width - text_w) / 2,
                 button.y + (button.height - DEFAULT_FONT_SIZE) / 2,
-                DEFAULT_FONT_SIZE, isEditing ? WHITE : BLACK);
+                DEFAULT_FONT_SIZE, editing ? WHITE : BLACK);
 
-      if (isHovering && IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
-        editingKeyIndex = i;
+      if (hovering && IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
+        editing_key_index = i;
     }
 
-  if (editingKeyIndex >= 0)
+  if (editing_key_index >= 0)
     {
       int key = GetKeyPressed ();
       if (key > 0 && key != KEY_O && key != KEY_ESCAPE && key != KEY_SPACE
           && key != KEY_ENTER)
         {
-          *keyBindingEntries[editingKeyIndex].keyPtr = key;
-          editingKeyIndex = -1;
+          *KEYBINDING_ENTRIES[editing_key_index].key_ptr = key;
+          editing_key_index = -1;
         }
       if (IsKeyPressed (KEY_ESCAPE))
-        editingKeyIndex = -1;
+        editing_key_index = -1;
     }
 
-  return isHoveringButton;
+  return any_hover;
 }
 
 static void
-rotationSpeedSlider (int startY)
+draw_rotation_speed_slider (int start_y)
 {
   float r = (float)rotation_speed;
-  int sliderWidth = 150, sliderHeight = 30;
-  Rectangle sliderRectangle
-      = (Rectangle){ .x = (float)(GetScreenWidth () - sliderWidth) / 2,
-                     .y = (float)startY,
-                     .width = sliderWidth,
-                     .height = sliderHeight };
+  Rectangle slider = (Rectangle){
+    .x = (float)(GetScreenWidth () - SLIDER_WIDTH) / 2,
+    .y = (float)start_y,
+    .width = SLIDER_WIDTH,
+    .height = SLIDER_HEIGHT,
+  };
 
-  if (GuiSlider (sliderRectangle, "0", "30", &r, 1.f, 30.f))
+  if (GuiSlider (slider, TextFormat ("%d", MIN_ROTATION_SPEED),
+                 TextFormat ("%d", MAX_ROTATION_SPEED), &r,
+                 (float)MIN_ROTATION_SPEED, (float)MAX_ROTATION_SPEED))
     rotation_speed = (int)r;
 
-  const char *crs = "Cube Rotation Speed:";
-  DrawText (
-      crs,
-      sliderRectangle.x
-          + (sliderRectangle.width - MeasureText (crs, DEFAULT_FONT_SIZE)) / 2,
-      sliderRectangle.y - 30, DEFAULT_FONT_SIZE, BLACK);
-  const char *rs = TextFormat ("%d", rotation_speed);
-  DrawText (rs,
-            sliderRectangle.x
-                + (sliderRectangle.width - MeasureText (rs, DEFAULT_FONT_SIZE))
-                      / 2,
-            sliderRectangle.y + sliderRectangle.height + 10,
-            DEFAULT_FONT_SIZE, BLACK);
+  const char *label = "Cube Rotation Speed:";
+  DrawText (label,
+            slider.x + (slider.width - MeasureText (label, DEFAULT_FONT_SIZE))
+                           / 2,
+            slider.y - SLIDER_LABEL_GAP, DEFAULT_FONT_SIZE, BLACK);
+
+  const char *value = TextFormat ("%d", rotation_speed);
+  DrawText (value,
+            slider.x + (slider.width - MeasureText (value, DEFAULT_FONT_SIZE))
+                           / 2,
+            slider.y + slider.height + SLIDER_VALUE_GAP, DEFAULT_FONT_SIZE,
+            BLACK);
 }
 
 static void
-solverOutputModeToggle (int startY)
+draw_solver_mode_toggle (int start_y)
 {
-  int toggleWidth = 280, toggleHeight = 30;
-  Rectangle bounds
-      = (Rectangle){ .x = (float)(GetScreenWidth () - toggleWidth) / 2,
-                     .y = (float)startY,
-                     .width = (float)toggleWidth / 2,
-                     .height = (float)toggleHeight };
+  Rectangle bounds = (Rectangle){
+    .x = (float)(GetScreenWidth () - TOGGLE_GROUP_WIDTH) / 2,
+    .y = (float)start_y,
+    .width = (float)TOGGLE_GROUP_WIDTH / 2,
+    .height = TOGGLE_HEIGHT,
+  };
 
-  int active = (int)solverOutputMode;
+  int active = (int)solver_mode;
   GuiToggleGroup (bounds, "Re-orient cube;Preserve view", &active);
-  solverOutputMode = (SolverOutputMode)active;
+  solver_mode = (options_solver_mode_t)active;
 
   const char *label = "Solver output:";
   DrawText (label,
             (GetScreenWidth () - MeasureText (label, DEFAULT_FONT_SIZE)) / 2,
-            startY - 30, DEFAULT_FONT_SIZE, BLACK);
+            start_y - TOGGLE_LABEL_GAP, DEFAULT_FONT_SIZE, BLACK);
 }
 
 static bool
-drawResetButton (int y)
+draw_reset_button (int y)
 {
-  const char *resetText = "Reset to Defaults";
-  int textW = MeasureText (resetText, DEFAULT_FONT_SIZE);
-  int width = textW + 20;
-  int height = 35;
-  Rectangle button = (Rectangle){ .x = (GetScreenWidth () - width) / 2,
-                                  .y = (float)y,
-                                  .width = (float)width,
-                                  .height = (float)height };
+  const char *text = "Reset to Defaults";
+  int text_w = MeasureText (text, DEFAULT_FONT_SIZE);
+  int width = text_w + RESET_BUTTON_PADDING_X;
+  Rectangle button = (Rectangle){
+    .x = (GetScreenWidth () - width) / 2,
+    .y = (float)y,
+    .width = (float)width,
+    .height = RESET_BUTTON_HEIGHT,
+  };
 
-  bool isHovering = CheckCollisionPointRec (GetMousePosition (), button);
+  bool hovering = CheckCollisionPointRec (GetMousePosition (), button);
   DrawRectangleRounded (button, 0.2f, 0,
-                        isHovering ? ColorBrightness (MAROON, -0.1f)
-                                   : ColorBrightness (MAROON, 0.1f));
-  DrawText (resetText, button.x + (button.width - textW) / 2,
+                        hovering ? ColorBrightness (MAROON, HOVER_DARKEN)
+                                 : ColorBrightness (MAROON, REST_LIGHTEN));
+  DrawText (text, button.x + (button.width - text_w) / 2,
             button.y + (button.height - DEFAULT_FONT_SIZE) / 2,
             DEFAULT_FONT_SIZE, WHITE);
 
-  if (isHovering && IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
-    Options_resetToDefaults ();
+  if (hovering && IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
+    options_reset_to_defaults ();
 
-  return isHovering;
+  return hovering;
 }
 
 void
-Options_resetToDefaults (void)
+options_reset_to_defaults (void)
 {
   keybindings_init ();
   rotation_speed = DEFAULT_ROTATION_SPEED;
-  solverOutputMode = DEFAULT_SOLVER_OUTPUT_MODE;
-  editingKeyIndex = -1;
+  solver_mode = DEFAULT_SOLVER_MODE;
+  editing_key_index = -1;
 }
 
 void
-Options_drawScreen (void)
+options_draw_screen (void)
 {
-  ClearBackground (BACKGROUND_COLOR);
-  int exitTextWidth = MeasureText ("Press 'o' to exit.", DEFAULT_FONT_SIZE);
-  DrawText ("Press 'o' to exit.", GetScreenWidth () - exitTextWidth - 10, 10,
-            DEFAULT_FONT_SIZE, DARKGRAY);
+  ClearBackground (OPTIONS_BG_COLOR);
+  const char *exit_hint = "Press 'o' to exit.";
+  int exit_w = MeasureText (exit_hint, DEFAULT_FONT_SIZE);
+  DrawText (exit_hint, GetScreenWidth () - exit_w - EXIT_TEXT_MARGIN,
+            EXIT_TEXT_MARGIN, DEFAULT_FONT_SIZE, DARKGRAY);
 
   bool hovering = false;
-  hovering |= drawKeyBindingsUI (60);
-  rotationSpeedSlider (450);
-  solverOutputModeToggle (550);
-  hovering |= drawResetButton (GetScreenHeight () - 60);
+  hovering |= draw_keybindings_ui (KEYBIND_SECTION_Y);
+  draw_rotation_speed_slider (SLIDER_Y);
+  draw_solver_mode_toggle (TOGGLE_Y);
+  hovering |= draw_reset_button (GetScreenHeight () - RESET_BUTTON_BOTTOM_Y);
 
   SetMouseCursor (hovering ? MOUSE_CURSOR_POINTING_HAND
                            : MOUSE_CURSOR_DEFAULT);
 }
 
-void
-Options_load (void)
+static char *
+read_file_to_string (const char *path)
 {
-  FILE *f = fopen (OPTIONS_FILE, "rb");
-  if (!f)
-    return;
+  FILE *f = fopen (path, "rb");
+  if (f == NULL)
+    return NULL;
 
-  fseek (f, 0, SEEK_END);
+  if (fseek (f, 0, SEEK_END) != 0)
+    {
+      fclose (f);
+      return NULL;
+    }
   long len = ftell (f);
-  fseek (f, 0, SEEK_SET);
   if (len <= 0)
     {
       fclose (f);
-      return;
+      return NULL;
+    }
+  rewind (f);
+
+  char *buf = malloc ((size_t)len + 1);
+  if (buf == NULL)
+    {
+      fprintf (stderr, "%s: out of memory reading %ld bytes\n", path, len);
+      fclose (f);
+      return NULL;
     }
 
-  char *buf = malloc (len + 1);
-  if (!buf)
-    {
-      fclose (f);
-      return;
-    }
-  fread (buf, 1, len, f);
-  buf[len] = '\0';
+  size_t got = fread (buf, 1, (size_t)len, f);
   fclose (f);
+  if (got != (size_t)len)
+    {
+      fprintf (stderr, "%s: short read (%zu of %ld)\n", path, got, len);
+      free (buf);
+      return NULL;
+    }
+  buf[len] = '\0';
+  return buf;
+}
+
+static void
+load_solver_mode (const cJSON *root)
+{
+  cJSON *node = cJSON_GetObjectItemCaseSensitive (root, JSON_KEY_SOLVER_MODE);
+  if (!cJSON_IsString (node) || node->valuestring == NULL)
+    return;
+  if (strcmp (node->valuestring, JSON_VAL_PRESERVE) == 0)
+    solver_mode = OPTIONS_SOLVER_PRESERVE;
+  else if (strcmp (node->valuestring, JSON_VAL_REORIENT) == 0)
+    solver_mode = OPTIONS_SOLVER_REORIENT;
+}
+
+static void
+load_keybindings (const cJSON *root)
+{
+  cJSON *kb = cJSON_GetObjectItemCaseSensitive (root, JSON_KEY_KEYBINDINGS);
+  if (!cJSON_IsObject (kb))
+    return;
+  for (size_t i = 0; i < KEYBINDING_COUNT; i++)
+    {
+      cJSON *item
+          = cJSON_GetObjectItemCaseSensitive (kb, KEYBINDING_ENTRIES[i].name);
+      if (cJSON_IsNumber (item))
+        *KEYBINDING_ENTRIES[i].key_ptr = item->valueint;
+    }
+}
+
+void
+options_load (void)
+{
+  char *buf = read_file_to_string (OPTIONS_FILE);
+  if (buf == NULL)
+    return;
 
   cJSON *root = cJSON_Parse (buf);
   free (buf);
-  if (!root)
+  if (root == NULL)
     {
       fprintf (stderr, "%s: parse error, keeping defaults\n", OPTIONS_FILE);
       return;
     }
 
-  cJSON *version = cJSON_GetObjectItemCaseSensitive (root, "version");
+  cJSON *version = cJSON_GetObjectItemCaseSensitive (root, JSON_KEY_VERSION);
   if (!cJSON_IsNumber (version) || version->valueint != OPTIONS_VERSION)
     {
       fprintf (stderr, "%s: unsupported version, keeping defaults\n",
@@ -275,65 +370,52 @@ Options_load (void)
       return;
     }
 
-  cJSON *rs = cJSON_GetObjectItemCaseSensitive (root, "rotationSpeed");
+  cJSON *rs = cJSON_GetObjectItemCaseSensitive (root, JSON_KEY_ROTATION);
   if (cJSON_IsNumber (rs))
     rotation_speed = rs->valueint;
 
-  cJSON *som = cJSON_GetObjectItemCaseSensitive (root, "solverOutputMode");
-  if (cJSON_IsString (som) && som->valuestring)
-    {
-      if (strcmp (som->valuestring, "preserve") == 0)
-        solverOutputMode = SOLVER_PRESERVE;
-      else if (strcmp (som->valuestring, "reorient") == 0)
-        solverOutputMode = SOLVER_REORIENT;
-    }
-
-  cJSON *kb = cJSON_GetObjectItemCaseSensitive (root, "keybindings");
-  if (cJSON_IsObject (kb))
-    {
-      for (size_t i = 0; i < KEY_BINDING_COUNT; i++)
-        {
-          cJSON *item = cJSON_GetObjectItemCaseSensitive (
-              kb, keyBindingEntries[i].name);
-          if (cJSON_IsNumber (item))
-            *keyBindingEntries[i].keyPtr = item->valueint;
-        }
-    }
+  load_solver_mode (root);
+  load_keybindings (root);
 
   cJSON_Delete (root);
 }
 
 void
-Options_save (void)
+options_save (void)
 {
   cJSON *root = cJSON_CreateObject ();
-  if (!root)
-    return;
-
-  cJSON_AddNumberToObject (root, "version", OPTIONS_VERSION);
-  cJSON_AddNumberToObject (root, "rotationSpeed", rotation_speed);
-  cJSON_AddStringToObject (root, "solverOutputMode",
-                           solverOutputMode == SOLVER_PRESERVE ? "preserve"
-                                                               : "reorient");
-
-  cJSON *kb = cJSON_AddObjectToObject (root, "keybindings");
-  if (kb)
+  if (root == NULL)
     {
-      for (size_t i = 0; i < KEY_BINDING_COUNT; i++)
-        cJSON_AddNumberToObject (kb, keyBindingEntries[i].name,
-                                 *keyBindingEntries[i].keyPtr);
+      fprintf (stderr, "%s: out of memory building JSON\n", OPTIONS_FILE);
+      return;
     }
+
+  cJSON_AddNumberToObject (root, JSON_KEY_VERSION, OPTIONS_VERSION);
+  cJSON_AddNumberToObject (root, JSON_KEY_ROTATION, rotation_speed);
+  cJSON_AddStringToObject (root, JSON_KEY_SOLVER_MODE,
+                           solver_mode == OPTIONS_SOLVER_PRESERVE
+                               ? JSON_VAL_PRESERVE
+                               : JSON_VAL_REORIENT);
+
+  cJSON *kb = cJSON_AddObjectToObject (root, JSON_KEY_KEYBINDINGS);
+  if (kb != NULL)
+    for (size_t i = 0; i < KEYBINDING_COUNT; i++)
+      cJSON_AddNumberToObject (kb, KEYBINDING_ENTRIES[i].name,
+                               *KEYBINDING_ENTRIES[i].key_ptr);
 
   char *out = cJSON_Print (root);
   cJSON_Delete (root);
-  if (!out)
-    return;
-
-  const char *tmpPath = OPTIONS_FILE ".tmp";
-  FILE *f = fopen (tmpPath, "wb");
-  if (!f)
+  if (out == NULL)
     {
-      perror ("fopen options.json.tmp");
+      fprintf (stderr, "%s: cJSON_Print failed\n", OPTIONS_FILE);
+      return;
+    }
+
+  const char *tmp_path = OPTIONS_FILE ".tmp";
+  FILE *f = fopen (tmp_path, "wb");
+  if (f == NULL)
+    {
+      perror ("fopen " OPTIONS_FILE ".tmp");
       free (out);
       return;
     }
@@ -341,9 +423,9 @@ Options_save (void)
   fclose (f);
   free (out);
 
-  if (rename (tmpPath, OPTIONS_FILE) != 0)
+  if (rename (tmp_path, OPTIONS_FILE) != 0)
     {
-      perror ("rename options.json");
-      remove (tmpPath);
+      perror ("rename " OPTIONS_FILE);
+      remove (tmp_path);
     }
 }

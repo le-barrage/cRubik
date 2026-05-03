@@ -174,14 +174,14 @@ findSolutionAndUpdateMoves (cube_t *cube, int depthLimit, int timeOut)
 
   currentSolution[0] = '\0';
 
-  if (solverOutputMode == SOLVER_REORIENT)
+  if (options_solver_mode () == OPTIONS_SOLVER_REORIENT)
     cube_append_normalization_tokens (currentSolution, &orientation);
 
   int len = strlen (currentSolution);
   for (int i = 0; i < depth; i++)
     {
       Move cur = moves[i];
-      face_t emitFace = (solverOutputMode == SOLVER_PRESERVE)
+      face_t emitFace = (options_solver_mode () == OPTIONS_SOLVER_PRESERVE)
                           ? orientation.face_map[cur.orientation]
                           : cur.orientation;
       currentSolution[len++] = cube_face_letter (emitFace);
@@ -930,7 +930,7 @@ initEverything (void *arg)
     init ();
 
   keybindings_init ();
-  Options_load ();
+  options_load ();
   queue = queue_create ();
   if (queue == NULL)
     {
@@ -966,7 +966,7 @@ UpdateDrawFrame ()
     {
       showOptions = !showOptions;
       if (!showOptions)
-        Options_save ();
+        options_save ();
     }
   else if (IsKeyPressed (KEY_P) && !showOptions && !showHelp)
     showPatterns = !showPatterns;
@@ -982,7 +982,7 @@ UpdateDrawFrame ()
   if (showHelp)
     drawHelpScreen ();
   else if (showOptions)
-    Options_drawScreen ();
+    options_draw_screen ();
   else if (showPatterns)
     drawPatternsScreen ();
   else
@@ -1049,7 +1049,7 @@ main (int argc, char **argv)
     }
 #endif
 
-  Options_save ();
+  options_save ();
 
   free (currentScramble);
   free (scramble);
