@@ -30,14 +30,68 @@ Sources:
 
 ## Current functionalities:
 
-- Cube visualization in 3D (in any NxNxN size):
-  - Cube outer layers can be rotated using the corresponding keys;
-  - Cube can be reset to its original solved state.
-- Scramble generations:
-  - Works with every cube size.
-- Timer.
-- Kociemba's algorithm (usually finds a solution in 20-22 moves only 3x3x3).
-- Cube rotation animation.
+- **3D cube visualization** (any NxNxN size up to 9x9x9):
+  - Face, slice, and whole-cube rotations.
+  - Reset to solved state.
+  - Configurable rotation animation speed.
+  - Camera orbit / zoom.
+- **Scramble generation** for any cube size.
+- **WCA-style timer**:
+  - Hold space to arm (turns green), release to start, any key to stop.
+  - Average of 5 (Ao5) computed over the most recent solves.
+  - Per-cube-size history (`times/3.time`, `times/4.time`, ...).
+  - Mark past solves as `+2` or `DNF` from the time list.
+- **Kociemba two-phase solver** (3x3x3 only, ~100ms per solve, typically 20–22 moves).
+  - Solution displayed as a move list, with an Apply button to animate it on the cube.
+  - Two output modes: re-orient cube to canonical, or preserve current view.
+- **Patterns screen**: apply named visual patterns (Superflip, Cube in a Cube, …) as animated playbacks.
+- **Options screen**:
+  - Rebind every rotation key (works on AZERTY/QWERTY).
+  - Change rotation animation speed.
+  - Choose solver output mode.
+  - Persisted to `options.json`.
+
+## Controls
+
+Defaults: every rotation key is rebindable in the Options screen.
+
+### Cube manipulation
+
+| Key                  | Action                                  |
+| -------------------- | --------------------------------------- |
+| `R` / `L` / `U` / `D` / `F` / `B` | Face turn (clockwise)        |
+| `M` / `E` / `S`      | Slice turn (clockwise)                  |
+| `X` / `Y` / `Z`      | Whole-cube rotation (clockwise)         |
+| `Alt` + any of above | Counter-clockwise variant               |
+
+### Timing & solving
+
+| Key                          | Action                                                   |
+| ---------------------------- | -------------------------------------------------------- |
+| `Enter`                      | Generate a new scramble                                  |
+| `Space` (hold ≥ 0.3s, then release) | Start the timer (WCA-style)                       |
+| Any key while timer runs     | Stop timer, save the solve, generate next scramble       |
+| `K`                          | Launch Kociemba solver (3x3x3 only)                      |
+| `+` / `Page Up`              | Increase cube size                                       |
+| `-` / `Page Down`            | Decrease cube size                                       |
+
+### Mouse
+
+| Action               | Effect                                          |
+| -------------------- | ----------------------------------------------- |
+| Drag left button     | Orbit the camera                                |
+| Wheel                | Zoom                                            |
+| Middle button        | Reset camera                                    |
+| Right button         | Reset cube to solved                            |
+
+### Screens
+
+| Key      | Action                              |
+| -------- | ----------------------------------- |
+| `H`      | Toggle help screen                  |
+| `O`      | Toggle options (saves on exit)      |
+| `P`      | Toggle patterns screen              |
+| `Esc`    | Open quit confirmation dialog       |
 
 ## Usage
 
