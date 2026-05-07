@@ -21,14 +21,22 @@ SRCS := \
 	kociemba/cubieCube.c \
 	kociemba/coordCube.c \
 	average.c \
+	camera.c \
 	cublet.c \
 	cube.c \
 	keybindings.c \
 	options.c \
 	patterns.c \
+	playback.c \
 	queue.c \
 	timer.c \
 	scramble.c \
+	solver.c \
+	ui_cube.c \
+	ui_help.c \
+	ui_loading.c \
+	ui_moves.c \
+	ui_patterns.c \
 	rubiksCube.c \
 	utils.c
 
