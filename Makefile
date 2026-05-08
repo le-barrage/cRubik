@@ -27,6 +27,7 @@ SRCS := \
 	core/cublet.c \
 	core/cube.c \
 	core/keybindings.c \
+	core/logger.c \
 	core/patterns.c \
 	core/playback.c \
 	core/queue.c \
@@ -51,6 +52,7 @@ BENCH_SRCS := \
 	solver/kociemba/coordCube.c \
 	core/cube.c \
 	core/cublet.c \
+	core/logger.c \
 	core/scramble.c \
 	core/utils.c \
 	bench.c

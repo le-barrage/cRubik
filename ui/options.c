@@ -3,6 +3,7 @@
 #include "raygui.h"
 #include "raylib.h"
 #include "keybindings.h"
+#include "logger.h"
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -302,7 +303,7 @@ read_file_to_string (const char *path)
   char *buf = malloc ((size_t)len + 1);
   if (buf == NULL)
     {
-      fprintf (stderr, "%s: out of memory reading %ld bytes\n", path, len);
+      LOG_ERROR ("%s: out of memory reading %ld bytes", path, len);
       fclose (f);
       return NULL;
     }
@@ -311,7 +312,7 @@ read_file_to_string (const char *path)
   fclose (f);
   if (got != (size_t)len)
     {
-      fprintf (stderr, "%s: short read (%zu of %ld)\n", path, got, len);
+      LOG_ERROR ("%s: short read (%zu of %ld)", path, got, len);
       free (buf);
       return NULL;
     }
@@ -357,15 +358,14 @@ options_load (void)
   free (buf);
   if (root == NULL)
     {
-      fprintf (stderr, "%s: parse error, keeping defaults\n", OPTIONS_FILE);
+      LOG_ERROR ("%s: parse error, keeping defaults", OPTIONS_FILE);
       return;
     }
 
   cJSON *version = cJSON_GetObjectItemCaseSensitive (root, JSON_KEY_VERSION);
   if (!cJSON_IsNumber (version) || version->valueint != OPTIONS_VERSION)
     {
-      fprintf (stderr, "%s: unsupported version, keeping defaults\n",
-               OPTIONS_FILE);
+      LOG_ERROR ("%s: unsupported version, keeping defaults", OPTIONS_FILE);
       cJSON_Delete (root);
       return;
     }
@@ -386,7 +386,7 @@ options_save (void)
   cJSON *root = cJSON_CreateObject ();
   if (root == NULL)
     {
-      fprintf (stderr, "%s: out of memory building JSON\n", OPTIONS_FILE);
+      LOG_ERROR ("%s: out of memory building JSON", OPTIONS_FILE);
       return;
     }
 
@@ -407,7 +407,7 @@ options_save (void)
   cJSON_Delete (root);
   if (out == NULL)
     {
-      fprintf (stderr, "%s: cJSON_Print failed\n", OPTIONS_FILE);
+      LOG_ERROR ("%s: cJSON_Print failed", OPTIONS_FILE);
       return;
     }
 
@@ -415,7 +415,7 @@ options_save (void)
   FILE *f = fopen (tmp_path, "wb");
   if (f == NULL)
     {
-      perror ("fopen " OPTIONS_FILE ".tmp");
+      LOG_PERROR ("fopen " OPTIONS_FILE ".tmp");
       free (out);
       return;
     }
@@ -425,7 +425,7 @@ options_save (void)
 
   if (rename (tmp_path, OPTIONS_FILE) != 0)
     {
-      perror ("rename " OPTIONS_FILE);
+      LOG_PERROR ("rename " OPTIONS_FILE);
       remove (tmp_path);
     }
 }

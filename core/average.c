@@ -1,6 +1,7 @@
 #include "average.h"
 
 #include "cJSON.h"
+#include "logger.h"
 #include "time_consts.h"
 #include <stdbool.h>
 #include <stdio.h>
@@ -105,7 +106,7 @@ read_json_file (const char *filename)
     {
       const char *err = cJSON_GetErrorPtr ();
       if (err)
-        fprintf (stderr, "%s: parse error: %s\n", filename, err);
+        LOG_ERROR ("%s: parse error: %s", filename, err);
     }
   return json;
 }
@@ -116,7 +117,7 @@ write_json_file (const char *filename, cJSON *json)
   FILE *f = fopen (filename, "wb");
   if (!f)
     {
-      perror (filename);
+      LOG_PERROR ("%s", filename);
       return 1;
     }
 
@@ -166,7 +167,7 @@ wrap_in_parens (char *str)
   size_t len = strlen (str);
   if (len + 3 > TIME_STR_MAX)
     {
-      fprintf (stderr, "wrap_in_parens: display too long: '%s'\n", str);
+      LOG_WARN ("wrap_in_parens: display too long: '%s'", str);
       return;
     }
   memmove (str + 1, str, len + 1);
@@ -269,9 +270,8 @@ solves_save (const char *time, const char *scramble, int cube_size)
           fclose (probe);
           if (size > 0)
             {
-              fprintf (stderr,
-                       "%s: refusing to overwrite unparseable file\n",
-                       filename);
+              LOG_ERROR ("%s: refusing to overwrite unparseable file",
+                         filename);
               return;
             }
         }
@@ -279,15 +279,14 @@ solves_save (const char *time, const char *scramble, int cube_size)
       root = new_solves_root (cube_size);
       if (!root)
         {
-          fprintf (stderr, "%s: out of memory creating solves root\n",
-                   filename);
+          LOG_ERROR ("%s: out of memory creating solves root", filename);
           return;
         }
     }
 
   if (add_solve_entry (root, time, scramble) != 0)
     {
-      fprintf (stderr, "%s: failed to append solve\n", filename);
+      LOG_ERROR ("%s: failed to append solve", filename);
       cJSON_Delete (root);
       return;
     }
@@ -311,7 +310,7 @@ solves_load_last_5 (char times[LAST_N_SOLVES][TIME_STR_MAX], int cube_size)
   cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
   if (!cJSON_IsArray (solves))
     {
-      fprintf (stderr, "%s: 'solves' array missing or wrong type\n", filename);
+      LOG_ERROR ("%s: 'solves' array missing or wrong type", filename);
       cJSON_Delete (root);
       return;
     }
@@ -414,7 +413,7 @@ modify_solve_field (int index, int cube_size, field_type_t field)
 {
   if (index < 0 || index >= LAST_N_SOLVES)
     {
-      fprintf (stderr, "modify_solve_field: index %d out of range\n", index);
+      LOG_ERROR ("modify_solve_field: index %d out of range", index);
       return;
     }
 
@@ -427,7 +426,7 @@ modify_solve_field (int index, int cube_size, field_type_t field)
   cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
   if (!cJSON_IsArray (solves))
     {
-      fprintf (stderr, "%s: 'solves' array missing or wrong type\n", filename);
+      LOG_ERROR ("%s: 'solves' array missing or wrong type", filename);
       cJSON_Delete (root);
       return;
     }
@@ -436,8 +435,8 @@ modify_solve_field (int index, int cube_size, field_type_t field)
   int idx = target_index (index, total);
   if (idx < 0 || idx >= total)
     {
-      fprintf (stderr, "%s: solve index %d out of range (total %d)\n",
-               filename, idx, total);
+      LOG_ERROR ("%s: solve index %d out of range (total %d)", filename, idx,
+                 total);
       cJSON_Delete (root);
       return;
     }
@@ -445,7 +444,7 @@ modify_solve_field (int index, int cube_size, field_type_t field)
   cJSON *solve = cJSON_GetArrayItem (solves, idx);
   if (!solve)
     {
-      fprintf (stderr, "%s: solve at index %d is null\n", filename, idx);
+      LOG_ERROR ("%s: solve at index %d is null", filename, idx);
       cJSON_Delete (root);
       return;
     }

@@ -3,6 +3,7 @@
 #include "kociemba/coordCube.h"
 #include "kociemba/enums.h"
 #include "kociemba/twoPhase.h"
+#include "logger.h"
 #include "options.h"
 #include "playback.h"
 #include "time_consts.h"
@@ -111,7 +112,7 @@ solver_thread_main (void *arg)
             "%d moves solution found in ~%d milliseconds:",
             solver_current_solution_size, elapsed_ms);
 
-  printf ("Solution found in ~%d milliseconds\n", elapsed_ms);
+  LOG_INFO ("solver: solution found in ~%d ms", elapsed_ms);
   is_thread_launched = false;
   return NULL;
 }
@@ -125,7 +126,7 @@ solver_launch (cube_t *cube)
   int error = pthread_create (&solver_thread, NULL, solver_thread_main, cube);
   if (error != 0)
     {
-      fprintf (stderr, "pthread_create (solver): %s\n", strerror (error));
+      LOG_ERROR ("pthread_create (solver): %s", strerror (error));
       is_thread_launched = false;
       return;
     }

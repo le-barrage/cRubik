@@ -2,8 +2,8 @@
 #include "camera.h"
 #include "cube.h"
 #include "raylib.h"
-#include "raymath.h"
 #include "keybindings.h"
+#include "logger.h"
 #include "options.h"
 #include "playback.h"
 #include "queue.h"
@@ -17,6 +17,7 @@
 #include "ui_moves.h"
 #include "ui_patterns.h"
 #include "utils.h"
+#include <getopt.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -161,12 +162,12 @@ generate_new_scramble (void)
   char **moves = malloc (length * sizeof (char *));
   if (moves == NULL)
     {
-      fprintf (stderr, "out of memory generating scramble\n");
+      LOG_ERROR ("out of memory generating scramble");
       return;
     }
   if (scramble_generate (moves, length, cube.size) != SCRAMBLE_OK)
     {
-      fprintf (stderr, "scramble_generate failed\n");
+      LOG_ERROR ("scramble_generate failed");
       free (moves);
       return;
     }
@@ -524,7 +525,7 @@ init_everything (void *arg)
   queue = queue_create ();
   if (queue == NULL)
     {
-      fprintf (stderr, "queue_create failed\n");
+      LOG_ERROR ("queue_create failed");
       exit (1);
     }
 
@@ -620,9 +621,62 @@ update_draw_frame (void)
   EndDrawing ();
 }
 
+static void
+print_usage(const char *argv)
+{
+  printf("Usage: %s [options]\n", argv);
+  printf("\n");
+  printf("Options:\n");
+  printf("  -h, --help               Show this help and exit\n");
+  printf("  -v, --version            Show version and exit\n");
+  printf("      --no-kociemba        Skip Kociemba pruning-table init\n");
+  printf("      --log-level LEVEL    debug, info (default), warn, error, none\n");
+  printf("      --log-file PATH      Redirect logs to a file (default: stderr)\n");
+}
+
+static log_level_t
+parse_log_level (const char *optarg)
+{
+  if (strcmp (optarg, "debug") == 0) return LOG_LEVEL_DEBUG;
+  if (strcmp (optarg, "info")  == 0) return LOG_LEVEL_INFO;
+  if (strcmp (optarg, "warn")  == 0) return LOG_LEVEL_WARN;
+  if (strcmp (optarg, "error") == 0) return LOG_LEVEL_ERROR;
+  if (strcmp (optarg, "none")  == 0) return LOG_LEVEL_NONE;
+  fprintf (stderr, "unknown log level: %s\n", optarg);
+  exit (1);
+}
+
 int
 main (int argc, char **argv)
 {
+  const char *optstring = "hv";
+  enum { OPT_LOG_LEVEL = 1000, OPT_LOG_FILE, OPT_NO_KOCIEMBA };
+  const struct option long_opts[] = {
+    {"help",        no_argument,       NULL, 'h'},
+    {"version",     no_argument,       NULL, 'v'},
+    {"no-kociemba", no_argument,       NULL, OPT_NO_KOCIEMBA},
+    {"log-level",   required_argument, NULL, OPT_LOG_LEVEL},
+    {"log-file",    required_argument, NULL, OPT_LOG_FILE},
+    {0, 0, 0, 0}
+  };
+  
+  int c;
+  bool skip_kociemba = false;
+  log_level_t log_level = LOG_LEVEL_INFO;
+  FILE *log_out = NULL;
+  while ((c = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1) {
+      switch (c) {
+      case 'h':              print_usage(argv[0]); return 0;
+      case 'v':              printf("cRubik v0.1\n"); return 0;
+      case OPT_NO_KOCIEMBA:  skip_kociemba = true; break;
+      case OPT_LOG_LEVEL:    log_level = parse_log_level(optarg); break;
+      case OPT_LOG_FILE:     log_out   = fopen(optarg, "w"); break;
+      case '?':              return 1;
+      default:               abort();
+      }
+  }
+
+  log_init (log_level, log_out);
   printf ("cRubik v0.1\n");
   SetTraceLogLevel (LOG_WARNING);
 
@@ -638,8 +692,6 @@ main (int argc, char **argv)
   GuiSetStyle (DEFAULT, TEXT_COLOR_NORMAL, GUI_TEXT_COLOR_NORMAL);
   GuiSetStyle (DEFAULT, TEXT_COLOR_FOCUSED, GUI_TEXT_COLOR_FOCUSED);
   GuiSetStyle (DEFAULT, TEXT_COLOR_PRESSED, GUI_TEXT_COLOR_PRESSED);
-
-  bool skip_kociemba = argc >= 2 && strncmp (argv[1], "-nk", 3) == 0;
 
   pthread_t thread;
   pthread_create (&thread, NULL, init_everything, &skip_kociemba);

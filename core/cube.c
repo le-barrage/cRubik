@@ -1,5 +1,6 @@
 #include "cube.h"
 
+#include "logger.h"
 #include "raylib.h"
 #include "utils.h"
 #include <ctype.h>
@@ -242,7 +243,7 @@ cube_apply_move (cube_t *cube, const char *move)
   rotation_t r;
   if (!rotation_from_char (face_letter_from_move (move, len), &r))
     {
-      fprintf (stderr, "cube_apply_move: bad move '%s'\n", move);
+      LOG_WARN ("cube_apply_move: bad move '%s'", move);
       return;
     }
 

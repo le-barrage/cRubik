@@ -1,5 +1,6 @@
 #include "coordCube.h"
 #include "cubieCube.h"
+#include "logger.h"
 
 short twistMove[N_TWIST][N_MOVE];
 short flipMove[N_FLIP][N_MOVE];
@@ -32,32 +33,33 @@ CoordCube CoordCube_make(CubieCube cubieCube) {
 }
 
 void init() {
+  LOG_INFO("kociemba: building move and pruning tables");
   initialize_moveCube();
-  printf("\ninitialize_moveCube();\n");
+  LOG_DEBUG("kociemba: initialize_moveCube done");
   initTwistMove();
-  printf("initTwistMove();\n");
+  LOG_DEBUG("kociemba: initTwistMove done");
   initFlipMove();
-  printf("initFlipMove();\n");
+  LOG_DEBUG("kociemba: initFlipMove done");
   initFRtoBR_Move();
-  printf("initFRtoBR_Move();\n");
+  LOG_DEBUG("kociemba: initFRtoBR_Move done");
   initURFtoDLF_Move();
-  printf("initURFtoDLF_Move();\n");
+  LOG_DEBUG("kociemba: initURFtoDLF_Move done");
   initURtoDF_Move();
-  printf("initURtoDF_Move();\n");
+  LOG_DEBUG("kociemba: initURtoDF_Move done");
   initURtoUL_Move();
-  printf("initURtoUL_Move();\n");
+  LOG_DEBUG("kociemba: initURtoUL_Move done");
   initUBtoDF_Move();
-  printf("initUBtoDF_Move();\n");
+  LOG_DEBUG("kociemba: initUBtoDF_Move done");
   initMergeURtoULandUBtoDF();
-  printf("initMergeURtoULandUBtoDF();\n");
+  LOG_DEBUG("kociemba: initMergeURtoULandUBtoDF done");
   initSlice_URFtoDLF_Parity_Prun();
-  printf("initSlice_URFtoDLF_Parity_Prun();\n");
+  LOG_DEBUG("kociemba: initSlice_URFtoDLF_Parity_Prun done");
   initSlice_URtoDF_Parity_Prun();
-  printf("initSlice_URtoDF_Parity_Prun();\n");
+  LOG_DEBUG("kociemba: initSlice_URtoDF_Parity_Prun done");
   initSlice_Twist_Prun();
-  printf("initSlice_Twist_Prun();\n");
+  LOG_DEBUG("kociemba: initSlice_Twist_Prun done");
   initSlice_Flip_Prun();
-  printf("initSlice_Flip_Prun();\n\n");
+  LOG_INFO("kociemba: tables ready");
 }
 
 // *****************Phase 1 move tables****************************

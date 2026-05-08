@@ -9,6 +9,7 @@
 #include "cube.h"
 #include "kociemba/coordCube.h"
 #include "kociemba/twoPhase.h"
+#include "logger.h"
 #include "scramble.h"
 #include "time_consts.h"
 
@@ -72,6 +73,7 @@ static int solve_cube(cube_t *cube, int *out_moves, long long *out_ns)
 
 int main(void)
 {
+    log_init(LOG_LEVEL_WARN, NULL);
     printf("Loading kociemba pruning tables...\n");
     init();
     printf("Running %d solves...\n", BENCH_RUNS);
@@ -88,7 +90,7 @@ int main(void)
     for (int run = 0; run < BENCH_RUNS; run++) {
         cube_t cube = cube_make(3, 1.0f);
         if (scramble_cube(&cube) != 0) {
-            fprintf(stderr, "run %d: scramble failed\n", run);
+            LOG_WARN("run %d: scramble failed", run);
             cube_destroy(&cube);
             continue;
         }
@@ -105,7 +107,7 @@ int main(void)
             if (moves < min_moves) min_moves = moves;
             if (moves > max_moves) max_moves = moves;
         } else
-            fprintf(stderr, "\nrun %d: %s\n", run, printErrorMessage(err));
+            LOG_WARN("run %d: %s", run, printErrorMessage(err));
 
         cube_destroy(&cube);
 
