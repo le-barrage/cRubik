@@ -10,6 +10,7 @@ ifdef DEBUG
 endif
 
 TARGET := cRubik
+BENCH_TARGET := bench
 
 SRCS := \
 	include/raygui.c \
@@ -40,17 +41,37 @@ SRCS := \
 	rubiksCube.c \
 	utils.c
 
+BENCH_SRCS := \
+	kociemba/twoPhase.c \
+	kociemba/move.c \
+	kociemba/faceCube.c \
+	kociemba/enums.c \
+	kociemba/cubieCube.c \
+	kociemba/coordCube.c \
+	cube.c \
+	cublet.c \
+	scramble.c \
+	utils.c \
+	bench.c
+
 BUILDDIR := build
 OBJS := $(SRCS:%.c=$(BUILDDIR)/%.o)
+BENCH_OBJS := $(BENCH_SRCS:%.c=$(BUILDDIR)/%.o)
 
-DEPS := $(OBJS:.o=.d)
+DEPS := $(OBJS:.o=.d) $(BENCH_OBJS:.o=.d)
 
-.PHONY: all clean run rebuild help
+.PHONY: all clean run rebuild help bench-run
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
 	$(CC) $(OBJS) -o $@ $(LDFLAGS) $(LDLIBS)
+
+$(BENCH_TARGET): $(BENCH_OBJS)
+	$(CC) $(BENCH_OBJS) -o $@ $(LDFLAGS) -Wl,--wrap=GetRandomValue $(LDLIBS)
+
+bench-run: $(BENCH_TARGET)
+	./$(BENCH_TARGET)
 
 $(BUILDDIR)/%.o: %.c
 	@mkdir -p $(dir $@)
@@ -64,17 +85,19 @@ run: all
 rebuild: clean all
 
 clean:
-	rm -rf $(BUILDDIR) $(TARGET)
+	rm -rf $(BUILDDIR) $(TARGET) $(BENCH_TARGET)
 
 help:
 	@echo "Usage: make [target] [DEBUG=1]"
 	@echo ""
 	@echo "Targets:"
-	@echo "  all      - Build $(TARGET) (default)"
-	@echo "  run      - Build and run $(TARGET)"
-	@echo "  clean    - Remove build files"
-	@echo "  rebuild  - Clean and rebuild"
-	@echo "  help     - Show this help"
+	@echo "  all        - Build $(TARGET) (default)"
+	@echo "  run        - Build and run $(TARGET)"
+	@echo "  bench      - Build $(BENCH_TARGET) (solver benchmark)"
+	@echo "  bench-run  - Build and run $(BENCH_TARGET)"
+	@echo "  clean      - Remove build files"
+	@echo "  rebuild    - Clean and rebuild"
+	@echo "  help       - Show this help"
 	@echo ""
 	@echo "Options:"
-	@echo "  DEBUG=1  - Build with debug symbols (-g -O0)"
+	@echo "  DEBUG=1    - Build with debug symbols (-g -O0)"
