@@ -1,0 +1,10 @@
+#ifndef TIME_CONSTS_H
+#define TIME_CONSTS_H
+
+#define MS_PER_SEC 1000
+#define SECONDS_PER_MIN 60
+#define MS_PER_MIN (MS_PER_SEC * SECONDS_PER_MIN)
+#define NS_PER_MS 1000000LL
+#define NS_PER_SEC (NS_PER_MS * MS_PER_SEC)
+
+#endif // TIME_CONSTS_H

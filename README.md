@@ -30,14 +30,101 @@ Sources:
 
 ## Current functionalities:
 
-- Cube visualization in 3D (in any NxNxN size):
-  - Cube outer layers can be rotated using the corresponding keys;
-  - Cube can be reset to its original solved state.
-- Scramble generations:
-  - Works with every cube size.
-- Timer.
-- Kociemba's algorithm (usually finds a solution in 20-22 moves only 3x3x3).
-- Cube rotation animation.
+- **3D cube visualization** (any NxNxN size up to 9x9x9):
+  - Face, slice, and whole-cube rotations.
+  - Reset to solved state.
+  - Configurable rotation animation speed.
+  - Camera orbit / zoom.
+- **Scramble generation** for any cube size.
+- **WCA-style timer**:
+  - Hold space to arm (turns green), release to start, any key to stop.
+  - Average of 5 (Ao5) computed over the most recent solves.
+  - Per-cube-size history (`times/3.time`, `times/4.time`, ...).
+  - Mark past solves as `+2` or `DNF` from the time list.
+- **Kociemba two-phase solver** (3x3x3 only, ~100ms per solve, typically 20–22 moves).
+  - Solution displayed as a move list, with an Apply button to animate it on the cube.
+  - Two output modes: re-orient cube to canonical, or preserve current view.
+- **Patterns screen**: apply named visual patterns (Superflip, Cube in a Cube, …) as animated playbacks.
+- **Options screen**:
+  - Rebind every rotation key (works on AZERTY/QWERTY).
+  - Change rotation animation speed.
+  - Choose solver output mode.
+  - Persisted to `options.json`.
+
+## Controls
+
+Defaults: every rotation key is rebindable in the Options screen.
+
+### Cube manipulation
+
+| Key                               | Action                                  |
+| --------------------------------- | --------------------------------------- |
+| `R` / `L` / `U` / `D` / `F` / `B` | Face turn (clockwise)                   |
+| `M` / `E` / `S`                   | Slice turn (clockwise)                  |
+| `X` / `Y` / `Z`                   | Whole-cube rotation (clockwise)         |
+| `Alt` + any of above              | Counter-clockwise variant               |
+
+### Timing & solving
+
+| Key                                 | Action                                                   |
+| ----------------------------------- | -------------------------------------------------------- |
+| `Enter`                             | Generate a new scramble                                  |
+| `Space` (hold ≥ 0.3s, then release) | Start the timer (WCA-style)                              |
+| Any key while timer runs            | Stop timer, save the solve, generate next scramble       |
+| `K`                                 | Launch Kociemba solver (3x3x3 only)                      |
+| `+` / `Page Up`                     | Increase cube size                                       |
+| `-` / `Page Down`                   | Decrease cube size                                       |
+
+### Mouse
+
+| Action               | Effect                                          |
+| -------------------- | ----------------------------------------------- |
+| Drag left button     | Orbit the camera                                |
+| Wheel                | Zoom                                            |
+| Middle button        | Reset camera                                    |
+| Right button         | Reset cube to solved                            |
+
+### Screens
+
+| Key      | Action                              |
+| -------- | ----------------------------------- |
+| `H`      | Toggle help screen                  |
+| `O`      | Toggle options (saves on exit)      |
+| `P`      | Toggle patterns screen              |
+| `Esc`    | Open quit confirmation dialog       |
+
+## Project structure
+
+```
+.
+├── main.c                 app entry point + UI orchestration
+├── bench.c                standalone benchmark (./bench)
+├── core/                  domain model + cube/cubie draw primitives
+│   ├── cube, cublet       NxNxN cube state + per-cubie draw
+│   ├── scramble           move generator
+│   ├── queue              opaque move queue (consumed by the cube animator)
+│   ├── patterns           named pattern table (Superflip, ...)
+│   ├── playback           in-progress move-sequence replay state
+│   ├── average            solve history (per cube size, JSON-backed)
+│   ├── timer              mm:ss:mmm stopwatch
+│   ├── keybindings        layout-aware key labels (AZERTY/QWERTY)
+│   ├── time_consts.h      shared MS/NS constants
+│   └── utils              ARRAY_LEN, color helpers, etc...
+├── solver/
+│   ├── solver.{c,h}       worker-thread wrapper around Kociemba
+│   └── kociemba/          Kociemba two-phase solver
+├── ui/                    raylib/raygui-coupled rendering & input
+│   ├── camera             orbit/zoom camera + mouse handling
+│   ├── options            settings screen + options.json persistence
+│   ├── ui_cube            3D cube draw call
+│   ├── ui_help            help screen
+│   ├── ui_loading         "LOADING..." spinner shown during startup
+│   ├── ui_moves           token-list renderer (scrambles, solutions)
+│   └── ui_patterns        patterns picker
+├── vendor/                third-party libraries (raylib, raygui, cJSON)
+├── times/                 runtime: per-size solve history (3.time, 4.time, ...)
+└── build/                 build artefacts
+```
 
 ## Usage
 
