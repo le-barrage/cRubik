@@ -57,23 +57,23 @@ Defaults: every rotation key is rebindable in the Options screen.
 
 ### Cube manipulation
 
-| Key                  | Action                                  |
-| -------------------- | --------------------------------------- |
-| `R` / `L` / `U` / `D` / `F` / `B` | Face turn (clockwise)        |
-| `M` / `E` / `S`      | Slice turn (clockwise)                  |
-| `X` / `Y` / `Z`      | Whole-cube rotation (clockwise)         |
-| `Alt` + any of above | Counter-clockwise variant               |
+| Key                               | Action                                  |
+| --------------------------------- | --------------------------------------- |
+| `R` / `L` / `U` / `D` / `F` / `B` | Face turn (clockwise)                   |
+| `M` / `E` / `S`                   | Slice turn (clockwise)                  |
+| `X` / `Y` / `Z`                   | Whole-cube rotation (clockwise)         |
+| `Alt` + any of above              | Counter-clockwise variant               |
 
 ### Timing & solving
 
-| Key                          | Action                                                   |
-| ---------------------------- | -------------------------------------------------------- |
-| `Enter`                      | Generate a new scramble                                  |
-| `Space` (hold ≥ 0.3s, then release) | Start the timer (WCA-style)                       |
-| Any key while timer runs     | Stop timer, save the solve, generate next scramble       |
-| `K`                          | Launch Kociemba solver (3x3x3 only)                      |
-| `+` / `Page Up`              | Increase cube size                                       |
-| `-` / `Page Down`            | Decrease cube size                                       |
+| Key                                 | Action                                                   |
+| ----------------------------------- | -------------------------------------------------------- |
+| `Enter`                             | Generate a new scramble                                  |
+| `Space` (hold ≥ 0.3s, then release) | Start the timer (WCA-style)                              |
+| Any key while timer runs            | Stop timer, save the solve, generate next scramble       |
+| `K`                                 | Launch Kociemba solver (3x3x3 only)                      |
+| `+` / `Page Up`                     | Increase cube size                                       |
+| `-` / `Page Down`                   | Decrease cube size                                       |
 
 ### Mouse
 
@@ -92,6 +92,39 @@ Defaults: every rotation key is rebindable in the Options screen.
 | `O`      | Toggle options (saves on exit)      |
 | `P`      | Toggle patterns screen              |
 | `Esc`    | Open quit confirmation dialog       |
+
+## Project structure
+
+```
+.
+├── main.c                 app entry point + UI orchestration
+├── bench.c                standalone benchmark (./bench)
+├── core/                  domain model + cube/cubie draw primitives
+│   ├── cube, cublet       NxNxN cube state + per-cubie draw
+│   ├── scramble           move generator
+│   ├── queue              opaque move queue (consumed by the cube animator)
+│   ├── patterns           named pattern table (Superflip, ...)
+│   ├── playback           in-progress move-sequence replay state
+│   ├── average            solve history (per cube size, JSON-backed)
+│   ├── timer              mm:ss:mmm stopwatch
+│   ├── keybindings        layout-aware key labels (AZERTY/QWERTY)
+│   ├── time_consts.h      shared MS/NS constants
+│   └── utils              ARRAY_LEN, color helpers, etc...
+├── solver/
+│   ├── solver.{c,h}       worker-thread wrapper around Kociemba
+│   └── kociemba/          Kociemba two-phase solver
+├── ui/                    raylib/raygui-coupled rendering & input
+│   ├── camera             orbit/zoom camera + mouse handling
+│   ├── options            settings screen + options.json persistence
+│   ├── ui_cube            3D cube draw call
+│   ├── ui_help            help screen
+│   ├── ui_loading         "LOADING..." spinner shown during startup
+│   ├── ui_moves           token-list renderer (scrambles, solutions)
+│   └── ui_patterns        patterns picker
+├── vendor/                third-party libraries (raylib, raygui, cJSON)
+├── times/                 runtime: per-size solve history (3.time, 4.time, ...)
+└── build/                 build artefacts
+```
 
 ## Usage
 
