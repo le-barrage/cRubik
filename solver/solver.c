@@ -1,5 +1,6 @@
 #include "solver.h"
 
+#include "funny.h"
 #include "kociemba/coordCube.h"
 #include "kociemba/enums.h"
 #include "kociemba/twoPhase.h"
@@ -7,10 +8,12 @@
 #include "options.h"
 #include "playback.h"
 #include "time_consts.h"
+#include "utils.h"
 #include <ctype.h>
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -32,6 +35,7 @@ void
 solver_init_kociemba (void)
 {
   init ();
+  srand ((unsigned)time (NULL));
 }
 
 static int
@@ -82,6 +86,14 @@ static void *
 solver_thread_main (void *arg)
 {
   cube_t *cube = (cube_t *)arg;
+  if (cube->size == 1)
+    {
+      const char *line = FUNNY_LINES[rand () % ARRAY_LEN (FUNNY_LINES)];
+      snprintf (solver_current_solution, sizeof solver_current_solution,
+                "%s", line);
+      is_thread_launched = false;
+      return NULL;
+    }
   if (cube->size != 3)
     {
       snprintf (solver_current_solution, sizeof solver_current_solution,
@@ -108,11 +120,19 @@ solver_thread_main (void *arg)
   long long elapsed_ns = (now.tv_sec - start.tv_sec) * (long long)NS_PER_SEC
                          + (now.tv_nsec - start.tv_nsec);
   int elapsed_ms = (int)(elapsed_ns / NS_PER_MS);
-  snprintf (solver_solution_found_text, sizeof solver_solution_found_text,
-            "%d moves solution found in ~%d milliseconds:",
-            solver_current_solution_size, elapsed_ms);
+  if (elapsed_ms == 0)
+    snprintf (solver_solution_found_text, sizeof solver_solution_found_text,
+              "%d moves solution found in <1 millisecond:",
+              solver_current_solution_size);
+  else
+    snprintf (solver_solution_found_text, sizeof solver_solution_found_text,
+              "%d moves solution found in ~%d milliseconds:",
+              solver_current_solution_size, elapsed_ms);
 
-  LOG_INFO ("solver: solution found in ~%d ms", elapsed_ms);
+  if (elapsed_ms == 0)
+    LOG_INFO ("solver: solution found in <1 ms");
+  else
+    LOG_INFO ("solver: solution found in ~%d ms", elapsed_ms);
   is_thread_launched = false;
   return NULL;
 }
