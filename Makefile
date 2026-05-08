@@ -1,57 +1,58 @@
 CC := gcc
 CFLAGS := -Wall -Wextra -Wno-unused-result -O2
-CFLAGS += -I./include -I./kociemba
-LDFLAGS := -L./include
+CFLAGS += -I./core -I./ui -I./solver -I./vendor
+LDFLAGS := -L./vendor
 LDLIBS := -lraylib -lm -pthread
 
 # Debug flags (use: make DEBUG=1)
 ifdef DEBUG
-	CFLAGS := -Wall -Wextra -Wno-unused-result -g -O0 -I./include -I./kociemba
+	CFLAGS := -Wall -Wextra -Wno-unused-result -g -O0 \
+	          -I./core -I./ui -I./solver -I./vendor
 endif
 
 TARGET := cRubik
 BENCH_TARGET := bench
 
 SRCS := \
-	include/raygui.c \
-	include/cJSON.c \
-	kociemba/twoPhase.c \
-	kociemba/move.c \
-	kociemba/faceCube.c \
-	kociemba/enums.c \
-	kociemba/cubieCube.c \
-	kociemba/coordCube.c \
-	average.c \
-	camera.c \
-	cublet.c \
-	cube.c \
-	keybindings.c \
-	options.c \
-	patterns.c \
-	playback.c \
-	queue.c \
-	timer.c \
-	scramble.c \
-	solver.c \
-	ui_cube.c \
-	ui_help.c \
-	ui_loading.c \
-	ui_moves.c \
-	ui_patterns.c \
-	rubiksCube.c \
-	utils.c
+	vendor/raygui.c \
+	vendor/cJSON.c \
+	solver/kociemba/twoPhase.c \
+	solver/kociemba/move.c \
+	solver/kociemba/faceCube.c \
+	solver/kociemba/enums.c \
+	solver/kociemba/cubieCube.c \
+	solver/kociemba/coordCube.c \
+	solver/solver.c \
+	core/average.c \
+	core/cublet.c \
+	core/cube.c \
+	core/keybindings.c \
+	core/patterns.c \
+	core/playback.c \
+	core/queue.c \
+	core/timer.c \
+	core/scramble.c \
+	core/utils.c \
+	ui/camera.c \
+	ui/options.c \
+	ui/ui_cube.c \
+	ui/ui_help.c \
+	ui/ui_loading.c \
+	ui/ui_moves.c \
+	ui/ui_patterns.c \
+	main.c
 
 BENCH_SRCS := \
-	kociemba/twoPhase.c \
-	kociemba/move.c \
-	kociemba/faceCube.c \
-	kociemba/enums.c \
-	kociemba/cubieCube.c \
-	kociemba/coordCube.c \
-	cube.c \
-	cublet.c \
-	scramble.c \
-	utils.c \
+	solver/kociemba/twoPhase.c \
+	solver/kociemba/move.c \
+	solver/kociemba/faceCube.c \
+	solver/kociemba/enums.c \
+	solver/kociemba/cubieCube.c \
+	solver/kociemba/coordCube.c \
+	core/cube.c \
+	core/cublet.c \
+	core/scramble.c \
+	core/utils.c \
 	bench.c
 
 BUILDDIR := build

@@ -1,8 +1,8 @@
 #include "ui_cube.h"
 
 #include "camera.h"
-#include "include/raylib.h"
-#include "include/raymath.h"
+#include "raylib.h"
+#include "raymath.h"
 #include "options.h"
 
 #define AXIS_TIP_PADDING  2.0f

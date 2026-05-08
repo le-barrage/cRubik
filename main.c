@@ -1,8 +1,8 @@
 #include "average.h"
 #include "camera.h"
 #include "cube.h"
-#include "include/raylib.h"
-#include "include/raymath.h"
+#include "raylib.h"
+#include "raymath.h"
 #include "keybindings.h"
 #include "options.h"
 #include "playback.h"
@@ -29,7 +29,7 @@
 #endif
 
 #define RAYGUI_IMPLEMENTATION
-#include "include/raygui.h"
+#include "raygui.h"
 
 /* ----- App-wide constants ---------------------------------------------- */
 

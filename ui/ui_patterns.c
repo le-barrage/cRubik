@@ -1,7 +1,7 @@
 #include "ui_patterns.h"
 
 #include "cube.h"
-#include "include/raylib.h"
+#include "raylib.h"
 #include "patterns.h"
 #include "utils.h"
 

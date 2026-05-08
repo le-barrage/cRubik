@@ -1,6 +1,6 @@
 #include "keybindings.h"
 
-#include "include/raylib.h"
+#include "raylib.h"
 #include <ctype.h>
 #include <stdio.h>
 

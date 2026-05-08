@@ -1,7 +1,7 @@
 #ifndef ENUM_H
 #define ENUM_H
 
-#include "../cublet.h"
+#include "cublet.h"
 
 typedef enum Corner { URF, UFL, ULB, UBR, DFR, DLF, DBL, DRB } Corner;
 

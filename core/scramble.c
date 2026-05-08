@@ -1,6 +1,6 @@
 #include "scramble.h"
 
-#include "include/raylib.h"
+#include "raylib.h"
 #include "utils.h"
 #include <stdbool.h>
 #include <stdio.h>

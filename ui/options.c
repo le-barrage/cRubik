@@ -1,7 +1,7 @@
 #include "options.h"
-#include "include/cJSON.h"
-#include "include/raygui.h"
-#include "include/raylib.h"
+#include "cJSON.h"
+#include "raygui.h"
+#include "raylib.h"
 #include "keybindings.h"
 #include "utils.h"
 #include <stdio.h>

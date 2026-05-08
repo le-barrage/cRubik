@@ -1,7 +1,7 @@
 #ifndef CUBLET_H
 #define CUBLET_H
 
-#include "include/raylib.h"
+#include "raylib.h"
 
 #define FACE_COUNT 6
 

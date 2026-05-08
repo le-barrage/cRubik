@@ -1,6 +1,6 @@
 #include "cublet.h"
 
-#include "include/rlgl.h"
+#include "rlgl.h"
 
 #define VERTICES_PER_FACE 4
 #define BORDER_LINE_WIDTH 3

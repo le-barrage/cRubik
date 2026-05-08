@@ -1,6 +1,6 @@
 #include "ui_loading.h"
 
-#include "include/raylib.h"
+#include "raylib.h"
 #include "utils.h"
 
 #define LOADING_FONT_SIZE       40

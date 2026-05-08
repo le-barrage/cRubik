@@ -1,6 +1,6 @@
 #include "average.h"
 
-#include "include/cJSON.h"
+#include "cJSON.h"
 #include "time_consts.h"
 #include <stdbool.h>
 #include <stdio.h>

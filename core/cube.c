@@ -1,6 +1,6 @@
 #include "cube.h"
 
-#include "include/raylib.h"
+#include "raylib.h"
 #include "utils.h"
 #include <ctype.h>
 #include <stdio.h>

@@ -1,7 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "include/raylib.h"
+#include "raylib.h"
 #include <stdbool.h>
 
 #define ARRAY_LEN(array) (sizeof (array) / sizeof (array[0]))

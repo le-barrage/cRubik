@@ -1,6 +1,6 @@
 #include "ui_moves.h"
 
-#include "include/raylib.h"
+#include "raylib.h"
 #include "utils.h"
 
 #include <string.h>

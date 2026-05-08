@@ -1,7 +1,7 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "include/raylib.h"
+#include "raylib.h"
 
 /* The active 3D camera. Writable so the renderer can pass it to
  * BeginMode3D directly. */

@@ -1,6 +1,6 @@
 #include "camera.h"
 
-#include "include/raymath.h"
+#include "raymath.h"
 #include <math.h>
 
 #define CAMERA_FOVY               90
