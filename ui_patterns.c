@@ -18,25 +18,52 @@
 #define HINT_MARGIN             10
 #define BACKGROUND_COLOR        GRAY
 
+/* Pattern arrays encode 180° turns as two consecutive identical rotations
+ * (e.g., R R or R' R'). When formatting display text we merge such pairs
+ * into the conventional "R2" form. */
 static void
 format_pattern_moves (size_t pattern_idx, queue_t *queue, char *out, size_t out_size)
 {
+  const pattern_t *p = &PATTERNS[pattern_idx];
   size_t pos = 0;
+  bool wrote_first_token = false;
   if (out_size > 0)
     out[0] = '\0';
-  for (size_t j = 0; j < PATTERNS[pattern_idx].move_count; j++)
+
+  for (size_t j = 0; j < p->move_count; j++)
     {
-      queue_push (queue, PATTERNS[pattern_idx].moves[j]);
+      queue_push (queue, p->moves[j]);
+
+      bool is_pair_second = (j > 0 && p->moves[j] == p->moves[j - 1]);
+      if (is_pair_second)
+        continue;
+
+      bool is_half = (j + 1 < p->move_count && p->moves[j + 1] == p->moves[j]);
+
       char tok[3];
-      cube_rotation_token (PATTERNS[pattern_idx].moves[j], tok);
+      cube_rotation_token (p->moves[j], tok);
       size_t tok_len = strlen (tok);
-      size_t needed = (j > 0 ? 1 : 0) + tok_len;
+
+      if (is_half)
+        {
+          if (tok_len > 0 && tok[tok_len - 1] == '\'')
+            tok[tok_len - 1] = '2';
+          else
+            {
+              tok[tok_len] = '2';
+              tok[tok_len + 1] = '\0';
+              tok_len++;
+            }
+        }
+
+      size_t needed = (wrote_first_token ? 1 : 0) + tok_len;
       if (pos + needed + 1 >= out_size)
         continue;
-      if (j > 0)
+      if (wrote_first_token)
         out[pos++] = ' ';
       memcpy (out + pos, tok, tok_len);
       pos += tok_len;
+      wrote_first_token = true;
     }
   if (out_size > 0)
     out[pos] = '\0';

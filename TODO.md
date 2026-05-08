@@ -20,6 +20,4 @@
 
 - add Ao12/50/100
 
-- patterns: change rot rot to rot2
-
 - pressing enter doesn't cancel kociemba
