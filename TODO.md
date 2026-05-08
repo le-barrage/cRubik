@@ -21,3 +21,5 @@
 - add Ao12/50/100
 
 - pressing enter doesn't cancel kociemba
+
+- look into windows support
