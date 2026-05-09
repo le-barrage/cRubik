@@ -478,3 +478,60 @@ solves_toggle_plus_two (int index, int cube_size)
 {
   modify_solve_field (index, cube_size, FIELD_PLUS_TWO);
 }
+
+bool
+solves_get_scramble (int last_n_index, int cube_size, char *out,
+                     size_t out_size)
+{
+  char filename[FILENAME_MAX_LEN];
+  get_solves_filename (filename, cube_size);
+  cJSON *root = read_json_file (filename);
+  if (!root)
+    return false;
+
+  cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
+  if (!cJSON_IsArray (solves))
+    {
+      LOG_ERROR ("%s: 'solves' array missing or wrong type", filename);
+      cJSON_Delete (root);
+      return false;
+    }
+
+  int total = cJSON_GetArraySize (solves);
+  int idx = target_index (last_n_index, total);
+  if (idx < 0 || idx >= total)
+    {
+      LOG_ERROR ("%s: solve index %d out of range (total %d)", filename, idx,
+                 total);
+      cJSON_Delete (root);
+      return false;
+    }
+
+  cJSON *solve = cJSON_GetArrayItem (solves, idx);
+  if (!solve)
+    {
+      LOG_ERROR ("%s: solve at index %d is null", filename, idx);
+      cJSON_Delete (root);
+      return false;
+    }
+
+  const cJSON *scramble = cJSON_GetObjectItemCaseSensitive (solve, "scramble");
+  if (!cJSON_IsString (scramble) || !scramble->valuestring)
+    {
+      LOG_ERROR ("%s: solve at index %d missing 'scramble' field", filename,
+                 idx);
+      cJSON_Delete (root);
+      return false;
+    }
+  if (strlen (scramble->valuestring) + 1 > out_size)
+    {
+      LOG_WARN ("solves_get_scramble: out_size %zu too small for scramble (%zu)",
+                out_size, strlen (scramble->valuestring) + 1);
+      cJSON_Delete (root);
+      return false;
+    }
+  snprintf (out, out_size, "%s", scramble->valuestring);
+
+  cJSON_Delete (root);
+  return true;
+}

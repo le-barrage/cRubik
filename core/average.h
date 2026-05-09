@@ -1,6 +1,8 @@
 #ifndef AVERAGE_H
 #define AVERAGE_H
 
+#include <stdbool.h>
+#include <stddef.h>
 #define LAST_N_SOLVES 5
 #define TIME_STR_MAX 20
 #define AVG_STR_LEN 10
@@ -26,5 +28,14 @@ void solves_average_of_5 (char times[LAST_N_SOLVES][TIME_STR_MAX],
  * within the most recent solves. Updates the on-disk file. */
 void solves_toggle_dnf (int index, int cube_size);
 void solves_toggle_plus_two (int index, int cube_size);
+
+/* Copy the scramble string of the solve at `last_n_index` to `out`.
+ * `last_n_index` is 0..LAST_N_SOLVES-1 and matches the indexing of the
+ * times[] array filled by solves_load_last_5. Returns true on success.
+ * Returns false (and leaves `out` unmodified) on any failure: file missing
+ * or unparseable, index out of range, scramble field missing, or
+ * `out_size` too small to hold the scramble. */
+bool solves_get_scramble (int last_n_index, int cube_size,
+                          char *out, size_t out_size);
 
 #endif // AVERAGE_H

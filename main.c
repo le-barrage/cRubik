@@ -189,12 +189,42 @@ init_scramble_and_solution (int size)
 }
 
 static void
+replay_scramble (const char *scramble_str)
+{
+  solver_cancel ();
+  clear_scramble_and_solution ();
+  reset_animation_and_solution ();
+  reset_cube_to_solved ();
+
+  char *copy = malloc (strlen (scramble_str) + 1);
+  if (copy == NULL)
+    {
+      LOG_ERROR ("out of memory replaying scramble");
+      return;
+    }
+  strcpy (copy, scramble_str);
+  for (char *t = strtok (copy, " "); t != NULL; t = strtok (NULL, " "))
+    {
+      char move_buf[8];
+      if (t[0] >= '0' && t[0] <= '9')
+        snprintf (move_buf, sizeof move_buf, "%s", t);
+      else
+        snprintf (move_buf, sizeof move_buf, "1w%s", t);
+      cube_apply_move (&cube, move_buf);
+    }
+  free (copy);
+  strcpy (current_scramble, scramble_str);
+
+  timer.is_disabled = false;
+}
+
+static void
 resize_cube (int increment)
 {
   int new_size = cube.size;
   if (!((new_size == CUBE_MAX_SIZE && increment > 0)
         || (new_size == 1 && increment < 0)))
-    new_size += increment;
+      new_size += increment;
 
   free (current_scramble);
   cube_destroy (&cube);
@@ -479,7 +509,7 @@ draw_solves_history (void)
                    (float)GetScreenHeight () / 2
                        + (time_detail_pos_y + 1) * TIME_LIST_LINE_HEIGHT,
                    TIME_DETAIL_W, TIME_DETAIL_H },
-      "Time details", times[time_detail_index], "Cancel;+2;DNF");
+      "Time details", times[time_detail_index], "Cancel;+2;DNF;Replay");
   if (!result || result == 1)
     is_time_detail_open = !is_time_detail_open;
   else if (result == 2)
@@ -494,6 +524,14 @@ draw_solves_history (void)
       solves_toggle_dnf (time_detail_index, cube.size);
       solves_load_last_5 (times, cube.size);
       solves_average_of_5 (times, avg);
+      is_time_detail_open = !is_time_detail_open;
+    }
+  else if (result == 4)
+    {
+      char scramble_buf[CURRENT_SCRAMBLE_TOK_LEN * scramble_length (cube.size) + 1];
+      if (solves_get_scramble (time_detail_index, cube.size, 
+                              scramble_buf, sizeof scramble_buf))
+        replay_scramble (scramble_buf);
       is_time_detail_open = !is_time_detail_open;
     }
 }
