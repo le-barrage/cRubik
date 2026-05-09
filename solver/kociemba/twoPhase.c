@@ -3,11 +3,17 @@
 #include "enums.h"
 #include "faceCube.h"
 #include <math.h>
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+
+static atomic_bool cancel_requested = false;
+
+void kociemba_request_cancel(void) { atomic_store(&cancel_requested, true); }
+void kociemba_clear_cancel(void)   { atomic_store(&cancel_requested, false); }
 
 int axis[31];
 int movePower[31];
@@ -55,6 +61,8 @@ char *printErrorMessage(int error) {
     return "No solution exists for the given maxDepth";
   if (error == -8)
     return "Timeout, no solution within given time";
+  if (error == -9)
+    return "Cancelled";
   if (error == 1)
     return "There are not exactly 9 facelets of each color in pattern";
   if (error == 2)
@@ -155,6 +163,10 @@ int findSolution(char *cube, int maxDepth, long timeOut, Move moves[maxDepth],
             // check for timeout
             if (elapsed_time_ms > timeOut) {
               return -8;
+            }
+            // check for cancellation
+            if (atomic_load(&cancel_requested)) {
+              return -9;
             }
             // we tried all 18 moves, so we need to backtrack or increase search
             // depth if we finished the DFS for current search depth, increase

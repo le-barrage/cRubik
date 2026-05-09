@@ -75,6 +75,7 @@ typedef enum
 static screen_t current_screen = SCREEN_CUBE;
 static bool show_exit_message_box = false;
 static bool is_everything_loaded = false;
+static bool show_debug_axes = false;
 
 /* ----- Timer overlay --------------------------------------------------- */
 
@@ -154,6 +155,7 @@ reset_cube_to_solved (void)
 static void
 generate_new_scramble (void)
 {
+  solver_cancel ();
   clear_scramble_and_solution ();
   reset_animation_and_solution ();
   reset_cube_to_solved ();
@@ -196,6 +198,7 @@ resize_cube (int increment)
         || (new_size == 1 && increment < 0)))
     new_size += increment;
 
+  solver_cancel ();
   free (current_scramble);
   cube_destroy (&cube);
 
@@ -301,6 +304,8 @@ handle_key_press (void)
     resize_cube (-1);
   else if (IsKeyPressed (KEY_ESCAPE))
     show_exit_message_box = true;
+  else if (IsKeyPressed(KEY_END))
+    show_debug_axes = !show_debug_axes;
 }
 
 static void
@@ -327,6 +332,7 @@ handle_mouse_and_update_camera (void)
 {
   if (IsMouseButtonPressed (MOUSE_BUTTON_RIGHT))
     {
+      solver_cancel ();
       reset_cube_to_solved ();
       clear_scramble_and_solution ();
       reset_animation_and_solution ();
@@ -501,7 +507,7 @@ draw_solves_history (void)
 static void
 draw_cube_screen (void)
 {
-  ui_cube_3d_draw (&cube);
+  ui_cube_3d_draw (&cube, show_debug_axes);
   draw_hint_bar ();
   draw_scramble_strip ();
   draw_timer_overlay ();

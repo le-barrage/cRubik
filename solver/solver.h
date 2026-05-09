@@ -37,6 +37,14 @@ void solver_apply_current (queue_t *queue, stopwatch_t *timer);
 /* Clears solution buffer and size. */
 void solver_clear_solution (void);
 
+/* True while the worker thread is searching. */
+bool solver_is_searching (void);
+
+/* If the worker is searching, request cooperative cancellation and block
+ * until the worker exits (typically a few ms). Idempotent and safe to call
+ * when no worker is running. */
+void solver_cancel (void);
+
 /* Called when the move queue drains. If a solver-driven playback was
  * running, clears the flag and re-enables `timer`. */
 void solver_finish (stopwatch_t *timer);
