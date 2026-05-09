@@ -75,6 +75,7 @@ typedef enum
 static screen_t current_screen = SCREEN_CUBE;
 static bool show_exit_message_box = false;
 static bool is_everything_loaded = false;
+static bool show_debug_axes = false;
 
 /* ----- Timer overlay --------------------------------------------------- */
 
@@ -301,6 +302,8 @@ handle_key_press (void)
     resize_cube (-1);
   else if (IsKeyPressed (KEY_ESCAPE))
     show_exit_message_box = true;
+  else if (IsKeyPressed(KEY_END))
+    show_debug_axes = !show_debug_axes;
 }
 
 static void
@@ -501,7 +504,7 @@ draw_solves_history (void)
 static void
 draw_cube_screen (void)
 {
-  ui_cube_3d_draw (&cube);
+  ui_cube_3d_draw (&cube, show_debug_axes);
   draw_hint_bar ();
   draw_scramble_strip ();
   draw_timer_overlay ();
