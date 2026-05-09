@@ -91,6 +91,7 @@ Defaults: every rotation key is rebindable in the Options screen.
 | `H`      | Toggle help screen                  |
 | `O`      | Toggle options (saves on exit)      |
 | `P`      | Toggle patterns screen              |
+| `End`    | Toggle debug axes overlay           |
 | `Esc`    | Open quit confirmation dialog       |
 
 ## Project structure

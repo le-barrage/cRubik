@@ -24,6 +24,7 @@ static const char *HELP_TEXTS[] = {
   "Press the space bar to start (or stop) the timer.",
   "Press '-' or 'page down' to reduce the cube size and '+' or 'page up' to "
   "increase it.",
+  "Press 'End' to toggle the debug axes overlay.",
 };
 #define HELP_TEXTS_COUNT ((int)ARRAY_LEN (HELP_TEXTS))
 
