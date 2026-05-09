@@ -155,6 +155,7 @@ reset_cube_to_solved (void)
 static void
 generate_new_scramble (void)
 {
+  solver_cancel ();
   clear_scramble_and_solution ();
   reset_animation_and_solution ();
   reset_cube_to_solved ();
@@ -197,6 +198,7 @@ resize_cube (int increment)
         || (new_size == 1 && increment < 0)))
     new_size += increment;
 
+  solver_cancel ();
   free (current_scramble);
   cube_destroy (&cube);
 
@@ -330,6 +332,7 @@ handle_mouse_and_update_camera (void)
 {
   if (IsMouseButtonPressed (MOUSE_BUTTON_RIGHT))
     {
+      solver_cancel ();
       reset_cube_to_solved ();
       clear_scramble_and_solution ();
       reset_animation_and_solution ();

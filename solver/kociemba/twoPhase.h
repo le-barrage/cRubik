@@ -13,6 +13,7 @@
   -6 Parity error: Two corners or two edges have to be exchanged
   -7 No solution exists for the given maxDepth
   -8 Timeout, no solution within given time
+  -9 Cancelled by caller via kociemba_request_cancel()
   1 There are not exactly 9 facelets of each color in pattern
   2 Not all 12 edges exist exactly once in pattern
   3 Flip error: One edge has to be flipped in pattern
@@ -75,5 +76,11 @@ void createMovesList(Move moves[], int depth);
  * returns: total maneuver length
  */
 int totalDepth(int depthPhase1, int maxDepth);
+
+/* Cooperative cancellation: callable from any thread. The next time the
+ * IDA* loop reaches its periodic check, findSolution returns -9. 
+ * Both functions are idempotent. */
+void kociemba_request_cancel(void);
+void kociemba_clear_cancel(void);
 
 #endif // !TWOPHASE_H

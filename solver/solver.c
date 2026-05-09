@@ -31,6 +31,11 @@ bool solver_is_running = false;
 static atomic_bool is_thread_launched = false;
 static pthread_t solver_thread;
 
+/* When true, solver_thread is joinable and we owe it a pthread_join.
+ * Only the main thread reads/writes this. The worker thread doesn't touch
+ * it. */
+static bool thread_needs_join = false;
+
 void
 solver_init_kociemba (void)
 {
@@ -111,8 +116,14 @@ solver_thread_main (void *arg)
   clock_gettime (CLOCK_MONOTONIC, &now);
   if (error != 0)
     {
-      snprintf (solver_current_solution, sizeof solver_current_solution, "%s",
-                printErrorMessage (error));
+      if (error == -9)
+        {
+          LOG_INFO ("solver: cancelled");
+          solver_current_solution[0] = '\0';
+        }
+      else
+        snprintf (solver_current_solution, sizeof solver_current_solution,
+                  "%s", printErrorMessage (error));
       is_thread_launched = false;
       return NULL;
     }
@@ -140,8 +151,14 @@ solver_thread_main (void *arg)
 void
 solver_launch (cube_t *cube)
 {
-  if (is_thread_launched)
+  if (solver_is_searching ())
     return;
+  if (thread_needs_join)
+    {
+      pthread_join (solver_thread, NULL);
+      thread_needs_join = false;
+    }
+  kociemba_clear_cancel ();
   is_thread_launched = true;
   int error = pthread_create (&solver_thread, NULL, solver_thread_main, cube);
   if (error != 0)
@@ -150,7 +167,28 @@ solver_launch (cube_t *cube)
       is_thread_launched = false;
       return;
     }
-  pthread_detach (solver_thread);
+  thread_needs_join = true;
+}
+
+bool
+solver_is_searching (void)
+{
+  return atomic_load (&is_thread_launched);
+}
+
+void
+solver_cancel (void)
+{
+  if (solver_is_searching ())
+    {
+      LOG_INFO ("solver: cancellation requested");
+      kociemba_request_cancel ();
+    }
+  if (thread_needs_join)
+    {
+      pthread_join (solver_thread, NULL);
+      thread_needs_join = false;
+    }
 }
 
 void
