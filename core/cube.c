@@ -45,7 +45,7 @@ cube_make (int size, float cubie_size)
     }
   cube.is_animating = false;
   cube.rotation_degrees = 0;
-  cube.current_rotation = (rotation_t)-1;
+  cube.current_move = (move_t){ .rotation = (rotation_t)-1 };
   return cube;
 }
 
@@ -67,7 +67,7 @@ cube_deep_copy (const cube_t *src)
     }
   dst.is_animating = src->is_animating;
   dst.rotation_degrees = src->rotation_degrees;
-  dst.current_rotation = src->current_rotation;
+  dst.current_move = src->current_move;
   return dst;
 }
 
@@ -96,8 +96,13 @@ step_animation (cube_t *cube, int rotation_speed)
     {
       cube->rotation_degrees = 0;
       cube->is_animating = false;
-      cube_rotate (cube, cube->current_rotation, 1);
-      cube->current_rotation = (rotation_t)-1;
+      if (cube->current_move.single_layer)
+        cube_rotate_single_layer (cube, cube->current_move.rotation,
+                                  cube->current_move.num_layers);
+      else
+        cube_rotate (cube, cube->current_move.rotation,
+                     cube->current_move.num_layers);
+      cube->current_move.rotation = (rotation_t)-1;
     }
 }
 
@@ -150,27 +155,37 @@ static const rotation_axis_def_t ROTATION_AXES[24] = {
 };
 
 static bool
-is_in_layer (int pos[3], int axis_dim, layer_pos_t kind, int size)
+is_in_layer (int pos[3], int axis_dim, layer_pos_t kind, const move_t *m,
+             int size)
 {
+  int n = (m->num_layers > 0) ? m->num_layers : 1;
   switch (kind)
     {
-    case LAYER_ALL:          return true;
-    case LAYER_INDEX_ZERO:   return pos[axis_dim] == 0;
-    case LAYER_INDEX_LAST:   return pos[axis_dim] == size - 1;
-    case LAYER_INDEX_MIDDLE: return pos[axis_dim] > 0 && pos[axis_dim] < size - 1;
+    case LAYER_ALL:
+      return true;
+    case LAYER_INDEX_ZERO:
+      if (m->single_layer)
+        return pos[axis_dim] == n - 1;
+      return pos[axis_dim] < n;
+    case LAYER_INDEX_LAST:
+      if (m->single_layer)
+        return pos[axis_dim] == size - n;
+      return pos[axis_dim] >= size - n;
+    case LAYER_INDEX_MIDDLE:
+      return pos[axis_dim] >= n && pos[axis_dim] < size - n;
     }
   return false;
 }
 
 static Vector3
-cubie_rotation_axis (rotation_t rotation, int pos_x, int pos_y, int pos_z,
+cubie_rotation_axis (const move_t *m, int pos_x, int pos_y, int pos_z,
                     int size)
 {
-  if (rotation < 0 || rotation >= (int)(sizeof (ROTATION_AXES) / sizeof (ROTATION_AXES[0])))
+  if (m->rotation < 0 || m->rotation >= (int)ARRAY_LEN (ROTATION_AXES))
     return (Vector3){ 0, 0, 0 };
-  const rotation_axis_def_t *def = &ROTATION_AXES[rotation];
+  const rotation_axis_def_t *def = &ROTATION_AXES[m->rotation];
   int pos[3] = { pos_x, pos_y, pos_z };
-  if (!is_in_layer (pos, def->axis_dim, def->kind, size))
+  if (!is_in_layer (pos, def->axis_dim, def->kind, m, size))
     return (Vector3){ 0, 0, 0 };
   return def->axis;
 }
@@ -184,7 +199,7 @@ draw_one_cubie (cube_t *cube, int pos_x, int pos_y, int pos_z)
     pos_z - (float)cube->size / 2 + 0.5f,
   };
 
-  Vector3 axis = cubie_rotation_axis (cube->current_rotation, pos_x, pos_y,
+  Vector3 axis = cubie_rotation_axis (&cube->current_move, pos_x, pos_y,
                                       pos_z, cube->size);
   bool axis_is_zero = (axis.x == 0 && axis.y == 0 && axis.z == 0);
   int rotation_degrees = axis_is_zero ? 0 : cube->rotation_degrees;
@@ -431,7 +446,7 @@ cube_rotate (cube_t *cube, rotation_t rotation, int num_layers)
       return;
     }
 
-  if (rotation < 0 || rotation >= (int)(sizeof (LAYER_ROTATIONS) / sizeof (LAYER_ROTATIONS[0])))
+  if (rotation < 0 || rotation >= (int)ARRAY_LEN (LAYER_ROTATIONS))
     return;
   const layer_rotation_def_t *def = &LAYER_ROTATIONS[rotation];
 
@@ -445,6 +460,18 @@ cube_rotate (cube_t *cube, rotation_t rotation, int num_layers)
       Vector3 dir = layer_axis_vector (def->axis_dim, layer_idx);
       rotate_layer (cube, dir, def->cubie_rotation, def->anti_clockwise);
     }
+}
+
+void
+cube_rotate_single_layer (cube_t *cube, rotation_t rotation, int depth)
+{
+  if (rotation >= ROT_M || depth < 1 || depth > cube->size / 2)
+    return;
+  const layer_rotation_def_t *def = &LAYER_ROTATIONS[rotation];
+  int layer_idx
+      = (def->iter == LAYER_ITER_FROM_LAST) ? cube->size - depth : depth - 1;
+  Vector3 dir = layer_axis_vector (def->axis_dim, layer_idx);
+  rotate_layer (cube, dir, def->cubie_rotation, def->anti_clockwise);
 }
 
 /*----------------------------------------------------------------*/

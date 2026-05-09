@@ -106,9 +106,9 @@ handle_rotation (rotation_t clockwise, rotation_t anti_clockwise)
     return;
   solver_clear_solution ();
   if (IsKeyDown (keybindings.key_ALT))
-    queue_push (queue, anti_clockwise);
+    queue_push (queue, move_face (anti_clockwise));
   else
-    queue_push (queue, clockwise);
+    queue_push (queue, move_face (clockwise));
 }
 
 /* Consumes `moves[0..length-1]`: applies each to the cube, appends to
@@ -349,11 +349,11 @@ handle_queue (void)
       playback_clear ();
       return;
     }
-  rotation_t popped;
+  move_t popped;
   if (queue_pop (queue, &popped) != QUEUE_OK)
     return;
   cube.is_animating = true;
-  cube.current_rotation = popped;
+  cube.current_move = popped;
   playback_advance ();
 }
 
@@ -637,7 +637,7 @@ update_draw_frame (void)
     case SCREEN_PATTERNS:
       {
         char text[PLAYBACK_TEXT_LEN];
-        if (ui_patterns_draw (queue, text, sizeof text))
+        if (ui_patterns_draw (cube.size, queue, text, sizeof text))
           {
             current_screen = SCREEN_CUBE;
             clear_scramble_and_solution ();

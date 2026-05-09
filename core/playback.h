@@ -3,8 +3,8 @@
 
 #include <stdbool.h>
 
-#define PLAYBACK_TEXT_LEN   256
-#define PLAYBACK_MAX_MOVES  64
+#define PLAYBACK_TEXT_LEN   1024
+#define PLAYBACK_MAX_MOVES  256
 
 /* Tracks an in-progress self-replay of a move sequence (e.g., a Kociemba
  * solution or a saved pattern). The cube renderer reads .text and

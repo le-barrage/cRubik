@@ -35,7 +35,7 @@ are_opposite_faces (char a, char b)
 /* Layer-prefixed move format is "<digits>w<face>...". Returns the face
  * letter regardless of how many digits the layer count occupies. */
 static char
-move_face (const char *full_move)
+extract_face_letter (const char *full_move)
 {
   const char *p = full_move;
   while (*p >= '0' && *p <= '9')
@@ -52,15 +52,15 @@ static bool
 move_is_valid (const char *full_move, char *const *sequence,
                int sequence_length)
 {
-  char fm_face = move_face (full_move);
-  char last_face = move_face (sequence[sequence_length - 1]);
+  char fm_face = extract_face_letter (full_move);
+  char last_face = extract_face_letter (sequence[sequence_length - 1]);
 
   if (fm_face == last_face)
     return false;
 
   if (sequence_length > 1)
     {
-      char prev_face = move_face (sequence[sequence_length - 2]);
+      char prev_face = extract_face_letter (sequence[sequence_length - 2]);
       if (fm_face == prev_face && are_opposite_faces (fm_face, last_face))
         return false;
     }

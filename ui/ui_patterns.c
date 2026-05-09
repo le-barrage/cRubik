@@ -15,62 +15,23 @@
 #define PATTERN_BUTTON_RADIUS  0.2f
 #define HOVER_DARKEN           -0.1f
 #define REST_LIGHTEN            0.1f
+#define DISABLED_LIGHTEN        0.4f
 #define HINT_MARGIN             10
 #define BACKGROUND_COLOR        GRAY
 
-/* Pattern arrays encode 180° turns as two consecutive identical rotations
- * (e.g., R R or R' R'). When formatting display text we merge such pairs
- * into the conventional "R2" form. */
-static void
-format_pattern_moves (size_t pattern_idx, queue_t *queue, char *out, size_t out_size)
+static bool
+pattern_applies (const pattern_t *p, int cube_size)
 {
-  const pattern_t *p = &PATTERNS[pattern_idx];
-  size_t pos = 0;
-  bool wrote_first_token = false;
-  if (out_size > 0)
-    out[0] = '\0';
-
-  for (size_t j = 0; j < p->move_count; j++)
-    {
-      queue_push (queue, p->moves[j]);
-
-      bool is_pair_second = (j > 0 && p->moves[j] == p->moves[j - 1]);
-      if (is_pair_second)
-        continue;
-
-      bool is_half = (j + 1 < p->move_count && p->moves[j + 1] == p->moves[j]);
-
-      char tok[3];
-      cube_rotation_token (p->moves[j], tok);
-      size_t tok_len = strlen (tok);
-
-      if (is_half)
-        {
-          if (tok_len > 0 && tok[tok_len - 1] == '\'')
-            tok[tok_len - 1] = '2';
-          else
-            {
-              tok[tok_len] = '2';
-              tok[tok_len + 1] = '\0';
-              tok_len++;
-            }
-        }
-
-      size_t needed = (wrote_first_token ? 1 : 0) + tok_len;
-      if (pos + needed + 1 >= out_size)
-        continue;
-      if (wrote_first_token)
-        out[pos++] = ' ';
-      memcpy (out + pos, tok, tok_len);
-      pos += tok_len;
-      wrote_first_token = true;
-    }
-  if (out_size > 0)
-    out[pos] = '\0';
+  if (cube_size < p->min_size)
+    return false;
+  if (p->max_size != 0 && cube_size > p->max_size)
+    return false;
+  return true;
 }
 
 bool
-ui_patterns_draw (queue_t *queue, char *out_text, size_t out_size)
+ui_patterns_draw (int cube_size, queue_t *queue, char *out_text,
+                  size_t out_size)
 {
   ClearBackground (BACKGROUND_COLOR);
   int hint_w = MeasureText ("Press 'p' to exit.", DEFAULT_FONT_SIZE);
@@ -95,27 +56,32 @@ ui_patterns_draw (queue_t *queue, char *out_text, size_t out_size)
       Rectangle button = (Rectangle){
         .x = x, .y = y, .width = PATTERN_BUTTON_W, .height = PATTERN_BUTTON_H
       };
-      bool hovering = CheckCollisionPointRec (GetMousePosition (), button);
+      bool applicable = pattern_applies (&PATTERNS[i], cube_size);
+      bool hovering = applicable
+                      && CheckCollisionPointRec (GetMousePosition (), button);
       any_hover |= hovering;
 
-      if (hovering)
-        {
-          DrawRectangleRounded (button, PATTERN_BUTTON_RADIUS, 0,
-                                ColorBrightness (DARKGRAY, HOVER_DARKEN));
-          if (IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
-            {
-              format_pattern_moves (i, queue, out_text, out_size);
-              selected = true;
-            }
-        }
+      Color fill;
+      if (!applicable)
+        fill = ColorBrightness (DARKGRAY, DISABLED_LIGHTEN);
+      else if (hovering)
+        fill = ColorBrightness (DARKGRAY, HOVER_DARKEN);
       else
-        DrawRectangleRounded (button, PATTERN_BUTTON_RADIUS, 0,
-                              ColorBrightness (DARKGRAY, REST_LIGHTEN));
+        fill = ColorBrightness (DARKGRAY, REST_LIGHTEN);
 
+      DrawRectangleRounded (button, PATTERN_BUTTON_RADIUS, 0, fill);
+
+      if (hovering && IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
+        {
+          PATTERNS[i].build (cube_size, queue, out_text, out_size);
+          selected = true;
+        }
+
+      Color text_color = applicable ? BLACK : LIGHTGRAY;
       int text_w = MeasureText (PATTERNS[i].name, DEFAULT_FONT_SIZE);
       DrawText (PATTERNS[i].name, x + (PATTERN_BUTTON_W - text_w) / 2,
                 y + (PATTERN_BUTTON_H - DEFAULT_FONT_SIZE) / 2,
-                DEFAULT_FONT_SIZE, BLACK);
+                DEFAULT_FONT_SIZE, text_color);
     }
   SetMouseCursor (any_hover ? MOUSE_CURSOR_POINTING_HAND
                             : MOUSE_CURSOR_DEFAULT);

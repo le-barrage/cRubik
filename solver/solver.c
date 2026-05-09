@@ -220,7 +220,7 @@ solver_apply_current (queue_t *queue, stopwatch_t *timer)
         {
           rotation_t r;
           if (rotation_from_char (curr_move, &r))
-            queue_push (queue, r);
+            queue_push (queue, move_face (r));
           rotation = curr_move;
           i++;
         }
@@ -230,7 +230,7 @@ solver_apply_current (queue_t *queue, stopwatch_t *timer)
         }
       rotation_t r;
       if (rotation_from_char (rotation, &r))
-        queue_push (queue, r);
+        queue_push (queue, move_face (r));
       i++;
     }
 }

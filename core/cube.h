@@ -28,6 +28,55 @@ typedef enum
   ROT_Z, ROT_Z_PRIME,
 } rotation_t;
 
+/* A rotation with context. Expresses an animatable cube move with enough
+ * information for the animator and the cube_rotate machinery to dispatch
+ * correctly:
+ *
+ *  - For face rotations (ROT_U..ROT_B_PRIME):
+ *      single_layer = false: turn the outer `num_layers` layers as one
+ *        wide chunk. num_layers=1 is the plain outer face turn.
+ *      single_layer = true: turn ONLY the layer at depth=num_layers from
+ *        the face. num_layers=1 is equivalent to single_layer=false.
+ *
+ *  - For slice rotations (ROT_M, ROT_E, ROT_S):
+ *      num_layers has the same meaning as cube_rotate's argument
+ *      (controls how far from the outer the slice reaches). single_layer
+ *      is ignored.
+ *
+ *  - For whole-cube rotations (ROT_X, ROT_Y, ROT_Z):
+ *      both num_layers and single_layer are ignored. */
+typedef struct
+{
+  rotation_t rotation;
+  int        num_layers;
+  bool       single_layer;
+} move_t;
+
+/* Convenience constructors. Use these instead of brace-init at call sites. */
+static inline move_t move_face (rotation_t r) {
+  return (move_t){ .rotation = r, .num_layers = 1, .single_layer = false };
+}
+static inline move_t move_face_wide (rotation_t r, int n) {
+  return (move_t){ .rotation = r, .num_layers = n, .single_layer = false };
+}
+static inline move_t move_face_single (rotation_t r, int depth) {
+  return (move_t){ .rotation = r, .num_layers = depth, .single_layer = true };
+}
+static inline move_t move_slice (rotation_t r, int n) {
+  return (move_t){ .rotation = r, .num_layers = n, .single_layer = false };
+}
+static inline move_t move_whole (rotation_t r) {
+  return (move_t){ .rotation = r, .num_layers = 0, .single_layer = false };
+}
+
+/* Macro forms of the above for use in static const initializers, where
+ * inline functions are not constant expressions. */
+#define MOVE_FACE(r)            { (r), 1, false }
+#define MOVE_FACE_WIDE(r, n)    { (r), (n), false }
+#define MOVE_FACE_SINGLE(r, d)  { (r), (d), true }
+#define MOVE_SLICE(r, n)        { (r), (n), false }
+#define MOVE_WHOLE(r)           { (r), 0, false }
+
 /* NxNxN Rubik's cube. Storage is a heap-allocated 3D array of cubies; the
  * struct itself is caller-managed (return by value, pass by pointer). Use
  * cube_make to construct, cube_destroy to release the heap arrays. */
@@ -36,7 +85,7 @@ typedef struct
   cubie_t ***cube;
   int size;
   bool is_animating;
-  rotation_t current_rotation;
+  move_t current_move;
   int rotation_degrees;
 } cube_t;
 
@@ -70,6 +119,18 @@ bool rotation_from_char (char c, rotation_t *out);
 void cube_apply_move (cube_t *cube, const char *move);
 
 void cube_rotate (cube_t *cube, rotation_t rotation, int num_layers);
+
+/* Rotates a single layer at `depth` from the side identified by
+ * `face_rotation`. depth=1 is the outer face layer (equivalent to
+ * cube_rotate(face_rotation, 1)), depth=2 is one layer in, ... up to
+ * depth=cube->size/2 which is the deepest layer reachable from this
+ * face (anything deeper is closer to the opposite face and should be
+ * addressed from there instead).
+ *
+ * `face_rotation` must be a face turn (ROT_U..ROT_B_PRIME). Slice and
+ * whole-cube rotations are no-ops here. */
+void cube_rotate_single_layer (cube_t *cube, rotation_t rotation,
+                               int depth);
 
 /* Writes the 54-character facelet string to `out` (must be at least
  * CUBE_FACELET_STR_LEN bytes). Only meaningful for 3x3x3. */
