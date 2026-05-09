@@ -12,11 +12,9 @@ V1.0:
 
 - change font ?
 
-- HUGE refactoring
+- HUGE refactoring (Kociemba left)
 
 - add Ao12/50/100
-
-- pressing enter doesn't cancel kociemba
 
 - look into windows support
 
