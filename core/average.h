@@ -18,11 +18,16 @@ void solves_save (const char *time, const char *scramble, int cube_size);
 void solves_load_last_5 (char times[LAST_N_SOLVES][TIME_STR_MAX],
                          int cube_size);
 
-/* Compute the average of LAST_N_SOLVES solves: drop best and worst, average
- * the rest. Writes "MM:SS.mmm" to `avg`, "DNF" if 2+ solves are DNF, or "-"
- * if any slot is missing. */
-void solves_average_of_5 (char times[LAST_N_SOLVES][TIME_STR_MAX],
-                          char avg[AVG_STR_LEN]);
+/* Average of the most recent 5 / 12 solves: drop best and worst, average
+ * the rest. Writes "MM:SS.mmm" to `avg`, "DNF" if 2+ solves are DNF, or
+ * "-" if fewer than 5 / 12 solves exist. Read the on-disk solves file
+ * directly. */
+void solves_average_of_5  (int cube_size, char avg[AVG_STR_LEN]);
+void solves_average_of_12 (int cube_size, char avg[AVG_STR_LEN]);
+
+/* Fastest non-DNF solve across the entire on-disk history. Writes
+ * "MM:SS.mmm" to `out`, or "-" if no valid solve exists. */
+void solves_best_time (int cube_size, char out[AVG_STR_LEN]);
 
 /* Toggle DNF or +2 status for the solve at `index` (0..LAST_N_SOLVES-1)
  * within the most recent solves. Updates the on-disk file. */

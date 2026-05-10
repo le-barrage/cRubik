@@ -8,7 +8,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define VALID_TIMES_FOR_AVG 3
 #define FILENAME_MAX_LEN 64
 #define PLUS_TWO_PENALTY_MS 2000
 
@@ -58,20 +57,6 @@ time_format (int total_ms, char *out, size_t out_size)
   int seconds = (total_ms / MS_PER_SEC) % SECONDS_PER_MIN;
   int ms = total_ms % MS_PER_SEC;
   snprintf (out, out_size, "%02d:%02d.%03d", minutes, seconds, ms);
-}
-
-static bool
-time_is_dnf (const char *time)
-{
-  if (time[0] == '(')
-    time++;
-  return strncmp (time, "DNF", 3) == 0;
-}
-
-static bool
-is_excluded_from_average (const char *time)
-{
-  return time[0] == '(' || time_is_dnf (time);
 }
 
 static cJSON *
@@ -333,39 +318,158 @@ solves_load_last_5 (char times[LAST_N_SOLVES][TIME_STR_MAX], int cube_size)
   cJSON_Delete (root);
 }
 
-void
-solves_average_of_5 (char times[LAST_N_SOLVES][TIME_STR_MAX],
-                     char avg[AVG_STR_LEN])
+/* Loads the most recent up-to-`n` solves into `out`. Returns the number
+ * actually loaded (0..n). Slots past the loaded count are left
+ * default-initialized. */
+static int
+load_last_n_entries (int n, int cube_size, solve_entry_t *out)
+{
+  for (int i = 0; i < n; i++)
+    out[i] = (solve_entry_t){ 0 };
+
+  char filename[FILENAME_MAX_LEN];
+  get_solves_filename (filename, cube_size);
+  cJSON *root = read_json_file (filename);
+  if (!root)
+    return 0;
+
+  cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
+  if (!cJSON_IsArray (solves))
+    {
+      LOG_ERROR ("%s: 'solves' array missing or wrong type", filename);
+      cJSON_Delete (root);
+      return 0;
+    }
+
+  int total = cJSON_GetArraySize (solves);
+  int count = total < n ? total : n;
+  int start = total - count;
+
+  for (int i = 0; i < count; i++)
+    parse_solve_json (cJSON_GetArrayItem (solves, start + i), &out[i]);
+
+  cJSON_Delete (root);
+  return count;
+}
+
+/* WCA-style AoN: 1 DNF allowed (counted as worst), drop best and worst,
+ * average the rest. Writes "MM:SS.mmm" to `out`, "DNF" if 2+ are DNF.
+ * Caller must have loaded `n` valid entries. */
+static void
+compute_average_drop_extremes (const solve_entry_t *entries, int n,
+                               char *out, size_t out_size)
 {
   int dnf_count = 0;
-  for (int i = 0; i < LAST_N_SOLVES; i++)
-    {
-      if (times[i][0] == '-')
-        {
-          avg[0] = '-';
-          avg[1] = '\0';
-          return;
-        }
-      if (time_is_dnf (times[i]))
-        dnf_count++;
-    }
+  for (int i = 0; i < n; i++)
+    if (entries[i].dnf)
+      dnf_count++;
   if (dnf_count > 1)
     {
-      strcpy (avg, "DNF");
+      strcpy (out, "DNF");
       return;
     }
 
-  int total_ms = 0;
-  int summed = 0;
-  for (int i = 0; i < LAST_N_SOLVES && summed < VALID_TIMES_FOR_AVG; i++)
+  int best_idx = -1, worst_idx = -1;
+  int best_ms = -1, worst_ms = -1;
+  bool found_dnf = false;
+  for (int i = 0; i < n; i++)
     {
-      if (is_excluded_from_average (times[i]))
-        continue;
-      total_ms += time_to_ms (times[i]);
-      summed++;
+      if (entries[i].dnf)
+        {
+          worst_idx = i;
+          found_dnf = true;
+          continue;
+        }
+      if (best_idx < 0 || entries[i].ms < best_ms)
+        {
+          best_idx = i;
+          best_ms = entries[i].ms;
+        }
+      if (!found_dnf && (worst_idx < 0 || entries[i].ms >= worst_ms))
+        {
+          worst_idx = i;
+          worst_ms = entries[i].ms;
+        }
     }
 
-  time_format (total_ms / VALID_TIMES_FOR_AVG, avg, AVG_STR_LEN);
+  int total_ms = 0;
+  int count = 0;
+  for (int i = 0; i < n; i++)
+    {
+      if (i == best_idx || i == worst_idx)
+        continue;
+      total_ms += entries[i].ms;
+      count++;
+    }
+
+  if (count == 0)
+    {
+      strcpy (out, "-");
+      return;
+    }
+
+  time_format (total_ms / count, out, out_size);
+}
+
+void
+solves_average_of_5 (int cube_size, char avg[AVG_STR_LEN])
+{
+  solve_entry_t entries[5];
+  if (load_last_n_entries (5, cube_size, entries) < 5)
+    {
+      strcpy (avg, "-");
+      return;
+    }
+  compute_average_drop_extremes (entries, 5, avg, AVG_STR_LEN);
+}
+
+void
+solves_average_of_12 (int cube_size, char avg[AVG_STR_LEN])
+{
+  solve_entry_t entries[12];
+  if (load_last_n_entries (12, cube_size, entries) < 12)
+    {
+      strcpy (avg, "-");
+      return;
+    }
+  compute_average_drop_extremes (entries, 12, avg, AVG_STR_LEN);
+}
+
+void
+solves_best_time (int cube_size, char out[AVG_STR_LEN])
+{
+  strcpy (out, "-");
+
+  char filename[FILENAME_MAX_LEN];
+  get_solves_filename (filename, cube_size);
+  cJSON *root = read_json_file (filename);
+  if (!root)
+    return;
+
+  cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
+  if (!cJSON_IsArray (solves))
+    {
+      LOG_ERROR ("%s: 'solves' array missing or wrong type", filename);
+      cJSON_Delete (root);
+      return;
+    }
+
+  int total = cJSON_GetArraySize (solves);
+  int best_ms = -1;
+  for (int i = 0; i < total; i++)
+    {
+      solve_entry_t entry;
+      parse_solve_json (cJSON_GetArrayItem (solves, i), &entry);
+      if (!entry.valid || entry.dnf)
+        continue;
+      if (best_ms < 0 || entry.ms < best_ms)
+        best_ms = entry.ms;
+    }
+
+  cJSON_Delete (root);
+
+  if (best_ms >= 0)
+    time_format (best_ms, out, AVG_STR_LEN);
 }
 
 static int

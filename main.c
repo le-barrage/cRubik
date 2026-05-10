@@ -69,6 +69,8 @@ static queue_t *queue;
 
 static char times[LAST_N_SOLVES][TIME_STR_MAX];
 static char avg[AVG_STR_LEN];
+static char avg12[AVG_STR_LEN];
+static char best[AVG_STR_LEN];
 
 /* ----- UI mode --------------------------------------------------------- */
 
@@ -196,6 +198,16 @@ init_scramble_and_solution (int size)
   clear_scramble_and_solution ();
   reset_animation_and_solution ();
   avg[0] = '\0';
+  avg12[0] = '\0';
+  best[0] = '\0';
+}
+
+static void
+recompute_solve_stats (void)
+{
+  solves_average_of_5 (cube.size, avg);
+  solves_average_of_12 (cube.size, avg12);
+  solves_best_time (cube.size, best);
 }
 
 static void
@@ -243,6 +255,7 @@ resize_cube (int increment)
   init_scramble_and_solution (new_size);
   camera_init (new_size);
   solves_load_last_5 (times, new_size);
+  recompute_solve_stats ();
 }
 
 /* Space-bar arms then starts the timer (WCA-style). The user holds space
@@ -298,7 +311,7 @@ handle_key_press (void)
       update_timer_string ();
       solves_save (timer_string, current_scramble, cube.size);
       solves_load_last_5 (times, cube.size);
-      solves_average_of_5 (times, avg);
+      recompute_solve_stats ();
       generate_new_scramble ();
       timer.just_stopped = false;
       is_timer_ready = false;
@@ -395,6 +408,7 @@ handle_mouse_and_update_camera (void)
 #define AO5_LEFT_X                  10
 #define AO5_TOP_OFFSET              100
 #define AO5_LABEL_GAP               10
+#define STATS_LINE_HEIGHT           30
 #define TIME_LIST_LINE_HEIGHT       30
 #define TIME_LIST_START_OFFSET      (-2)
 #define TIME_DETAIL_W               350
@@ -490,15 +504,22 @@ draw_solution_panel (void)
 }
 
 static void
+draw_stat_line (const char *label, const char *value, int y)
+{
+  font_draw (label, AO5_LEFT_X, y, DEFAULT_FONT_SIZE, BLACK);
+  font_draw (value,
+             AO5_LEFT_X + font_measure (label, DEFAULT_FONT_SIZE)
+                 + AO5_LABEL_GAP,
+             y, DEFAULT_FONT_SIZE, BLACK);
+}
+
+static void
 draw_solves_history (void)
 {
-  font_draw ("Ao5:", AO5_LEFT_X, GetScreenHeight () / 2 - AO5_TOP_OFFSET,
-             DEFAULT_FONT_SIZE, BLACK);
-  font_draw (avg,
-             AO5_LEFT_X + font_measure ("Ao5:", DEFAULT_FONT_SIZE)
-                 + AO5_LABEL_GAP,
-             GetScreenHeight () / 2 - AO5_TOP_OFFSET, DEFAULT_FONT_SIZE,
-             BLACK);
+  int y0 = GetScreenHeight () / 2 - AO5_TOP_OFFSET;
+  draw_stat_line ("Best:", best, y0 - 2 * STATS_LINE_HEIGHT);
+  draw_stat_line ("Ao12:", avg12, y0 - STATS_LINE_HEIGHT);
+  draw_stat_line ("Ao5: ", avg, y0);
 
   int pos_y = TIME_LIST_START_OFFSET;
   for (int i = LAST_N_SOLVES - 1; i >= 0; i--)
@@ -535,14 +556,14 @@ draw_solves_history (void)
     {
       solves_toggle_plus_two (time_detail_index, cube.size);
       solves_load_last_5 (times, cube.size);
-      solves_average_of_5 (times, avg);
+      recompute_solve_stats ();
       is_time_detail_open = !is_time_detail_open;
     }
   else if (result == 3)
     {
       solves_toggle_dnf (time_detail_index, cube.size);
       solves_load_last_5 (times, cube.size);
-      solves_average_of_5 (times, avg);
+      recompute_solve_stats ();
       is_time_detail_open = !is_time_detail_open;
     }
   else if (result == 4)
@@ -594,7 +615,7 @@ init_everything (void *arg)
 
   is_everything_loaded = true;
 
-  solves_average_of_5 (times, avg);
+  recompute_solve_stats ();
 
   return NULL;
 }
