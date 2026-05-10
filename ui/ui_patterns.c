@@ -1,6 +1,5 @@
 #include "ui_patterns.h"
 
-#include "cube.h"
 #include "font.h"
 #include "raylib.h"
 #include "patterns.h"
@@ -8,7 +7,7 @@
 
 #include <string.h>
 
-#define PATTERN_BUTTON_W       300
+#define PATTERN_BUTTON_W       350
 #define PATTERN_BUTTON_H       50
 #define PATTERN_SPACING        20
 #define PATTERN_COLUMNS        2

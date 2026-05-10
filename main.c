@@ -51,7 +51,7 @@
 
 #define WINDOW_INIT_W  1200
 #define WINDOW_INIT_H  800
-#define WINDOW_MIN_W   800
+#define WINDOW_MIN_W   1080
 #define WINDOW_MIN_H   600
 #define TARGET_FPS     40
 
@@ -399,9 +399,9 @@ handle_mouse_and_update_camera (void)
 
 /* ----- Cube screen ---------------------------------------------------- */
 
-#define SCRAMBLE_LABEL_FONT_SIZE    30
+#define SCRAMBLE_LABEL_FONT_SIZE    35
 #define SCRAMBLE_MOVES_TOP_Y        50
-#define TIMER_FONT_SIZE             40
+#define TIMER_FONT_SIZE             45
 #define TIMER_BOTTOM_Y              50
 #define SOLUTION_FOUND_BOTTOM_Y     130
 #define SOLUTION_MOVES_BOTTOM_Y     100

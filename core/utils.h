@@ -6,7 +6,7 @@
 
 #define ARRAY_LEN(array) (sizeof (array) / sizeof (array[0]))
 
-#define DEFAULT_FONT_SIZE 20
+#define DEFAULT_FONT_SIZE 25
 
 bool colors_equal (Color a, Color b);
 

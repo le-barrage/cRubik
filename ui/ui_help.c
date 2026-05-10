@@ -7,7 +7,7 @@
 #include <math.h>
 
 #define HELP_MARGIN          100
-#define HELP_MIN_FONT_SIZE   18
+#define HELP_MIN_FONT_SIZE   20
 #define HELP_MAX_FONT_SIZE   40
 #define HELP_LINE_HEIGHT     50
 #define HINT_MARGIN          10

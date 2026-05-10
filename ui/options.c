@@ -35,7 +35,7 @@
 #define SLIDER_VALUE_GAP  10
 
 #define TOGGLE_Y            550
-#define TOGGLE_GROUP_WIDTH  350
+#define TOGGLE_GROUP_WIDTH  400
 #define TOGGLE_HEIGHT       30
 #define TOGGLE_LABEL_GAP    30
 
