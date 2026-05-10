@@ -8,7 +8,7 @@ static const char *const FUNNY_LINES[] = {
   "I trained for years. I was not trained for this.",
   "After careful analysis: I quit.",
   "The 1x1x1 has eluded mathematicians for centuries. I will not be the hero today.",
-  "Some puzzles are not meant to be solved. They are meant to be feared.",
+  "Some puzzles are not meant to be solved. Some are meant to be feared...",
   "Beyond my pay grade... Beyond anyone's pay grade.",
 };
 

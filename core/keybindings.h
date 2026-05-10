@@ -1,15 +1,6 @@
 #ifndef KEYBINDINGS_H
 #define KEYBINDINGS_H
 
-/* Layout-position keycodes for AZERTY: raylib reports physical-position
- * scancodes. On AZERTY layouts the M / A / Q / Z / W positions have
- * different codes than on QWERTY. */
-#define KEY_M_FR 59
-#define KEY_A_FR 81
-#define KEY_Q_FR 65
-#define KEY_Z_FR 87
-#define KEY_W_FR 90
-
 typedef struct
 {
   int key_R;

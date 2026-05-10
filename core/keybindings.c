@@ -21,12 +21,12 @@ keybindings_init (void)
   keybindings.key_D = KEY_D;
   keybindings.key_F = KEY_F;
   keybindings.key_B = KEY_B;
-  keybindings.key_M = KEY_M_FR;
+  keybindings.key_M = KEY_M;
   keybindings.key_S = KEY_S;
   keybindings.key_E = KEY_E;
   keybindings.key_X = KEY_X;
   keybindings.key_Y = KEY_Y;
-  keybindings.key_Z = KEY_Z_FR;
+  keybindings.key_Z = KEY_Z;
   keybindings.key_ALT = KEY_LEFT_ALT;
 }
 

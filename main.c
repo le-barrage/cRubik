@@ -26,14 +26,21 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(PLATFORM_WEB)
-#include <emscripten/emscripten.h>
-#endif
-
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
 /* ----- App-wide constants ---------------------------------------------- */
+
+#define CRUBIK_VERSION_MAJOR 0
+#define CRUBIK_VERSION_MINOR 1
+#define CRUBIK_VERSION_PATCH 0
+
+#define CRUBIK_STRINGIFY_RAW(x) #x
+#define CRUBIK_STRINGIFY(x)     CRUBIK_STRINGIFY_RAW(x)
+#define CRUBIK_VERSION                          \
+  CRUBIK_STRINGIFY (CRUBIK_VERSION_MAJOR) "."   \
+  CRUBIK_STRINGIFY (CRUBIK_VERSION_MINOR) "."   \
+  CRUBIK_STRINGIFY (CRUBIK_VERSION_PATCH)
 
 #define CUBIE_SIZE 0.98f
 
@@ -717,7 +724,7 @@ main (int argc, char **argv)
   while ((c = getopt_long(argc, argv, optstring, long_opts, NULL)) != -1) {
       switch (c) {
       case 'h':              print_usage(argv[0]); return 0;
-      case 'v':              printf("cRubik v0.1\n"); return 0;
+      case 'v':              printf("cRubik v%s\n", CRUBIK_VERSION); return 0;
       case OPT_NO_KOCIEMBA:  skip_kociemba = true; break;
       case OPT_LOG_LEVEL:    log_level = parse_log_level(optarg); break;
       case OPT_LOG_FILE:     log_out   = fopen(optarg, "w"); break;
@@ -727,7 +734,7 @@ main (int argc, char **argv)
   }
 
   log_init (log_level, log_out);
-  printf ("cRubik v0.1\n");
+  printf ("cRubik v%s\n", CRUBIK_VERSION);
   SetTraceLogLevel (LOG_WARNING);
 
   SetConfigFlags (FLAG_MSAA_4X_HINT);
@@ -756,17 +763,12 @@ main (int argc, char **argv)
 
   pthread_join (thread, NULL);
 
-#if defined(PLATFORM_WEB)
-  emscripten_set_main_loop (update_draw_frame, 0, 1);
-#else
-
   while (!WindowShouldClose ())
     {
       update_draw_frame ();
       if (exit_program)
         break;
     }
-#endif
 
   options_save ();
 
