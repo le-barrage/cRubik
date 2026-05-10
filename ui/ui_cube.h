@@ -11,4 +11,4 @@
  * the surrounding 2D HUD on the same frame. */
 void ui_cube_3d_draw (cube_t *cube, bool show_debug_axes);
 
-#endif // UI_CUBE_H
+#endif  // UI_CUBE_H

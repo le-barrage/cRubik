@@ -3,10 +3,9 @@
 
 #include <stdbool.h>
 
-typedef enum
-{
-  OPTIONS_SOLVER_REORIENT,
-  OPTIONS_SOLVER_PRESERVE,
+typedef enum {
+    OPTIONS_SOLVER_REORIENT,
+    OPTIONS_SOLVER_PRESERVE,
 } options_solver_mode_t;
 
 void options_draw_screen (void);
@@ -28,4 +27,4 @@ options_solver_mode_t options_solver_mode (void);
  * no animation. */
 bool options_animate_patterns (void);
 
-#endif // OPTIONS_H
+#endif  // OPTIONS_H

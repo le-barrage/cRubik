@@ -1,0 +1,89 @@
+---
+Language: Cpp
+BasedOnStyle: GNU
+
+# Indentation
+IndentWidth:             4
+TabWidth:                4
+UseTab:                  Never
+ContinuationIndentWidth: 4
+IndentPPDirectives: BeforeHash
+
+# Column limit
+ColumnLimit: 120
+
+# Pointer: int *p
+PointerAlignment:      Right
+DerivePointerAlignment: false
+
+# Braces: GNU style for functions, attached for everything else
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction:         true
+  AfterControlStatement: Never
+  AfterStruct:           false
+  AfterUnion:            false
+  AfterEnum:             false
+  AfterExternBlock:      false
+  AfterCaseLabel:        false
+  BeforeElse:            false
+  BeforeWhile:           false
+  IndentBraces:          false
+  SplitEmptyFunction:    false
+  SplitEmptyRecord:      false
+
+# Don't break return type onto its own line (GNU does this — annoying)
+AlwaysBreakAfterDefinitionReturnType: None
+AlwaysBreakAfterReturnType:           None
+
+# Auto-align consecutive things
+AlignConsecutiveAssignments:  Consecutive
+AlignConsecutiveDeclarations: None
+AlignConsecutiveMacros:       Consecutive
+AlignConsecutiveBitFields:    Consecutive
+AlignTrailingComments:        true
+AlignArrayOfStructures:       Left
+AlignEscapedNewlines:         Left
+AlignOperands:                Align
+
+# Allow short statements on a single line
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine:        true
+AllowShortBlocksOnASingleLine:       Empty
+AllowShortFunctionsOnASingleLine:    All
+AllowShortCaseLabelsOnASingleLine:   false
+AllowShortEnumsOnASingleLine:        false
+
+# Switch/case: indent case labels
+IndentCaseLabels: true
+IndentCaseBlocks: false
+
+# Includes: sort and group
+SortIncludes:  CaseSensitive
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex:    '^".*"'      # local headers
+    Priority: 1
+  - Regex:    '^<.*\.h>'   # C system headers
+    Priority: 2
+
+# Spacing
+SpaceBeforeParens: Custom
+SpaceBeforeParensOptions:
+  AfterControlStatements:       true   # if (x), while (x), for (...)
+  AfterFunctionDefinitionName:  true   # int my_func (int x) { ... }
+  AfterFunctionDeclarationName: true   # int my_func (int x);
+  AfterOverloadedOperator:      false
+  BeforeNonEmptyParentheses:    false  # function calls: my_func(x)
+SpacesInParentheses:            false
+SpacesInSquareBrackets:         false
+SpaceAfterCStyleCast:           false
+SpaceBeforeAssignmentOperators: true
+SpaceInEmptyParentheses:        false
+SpacesBeforeTrailingComments:   2
+
+# Tidy
+KeepEmptyLinesAtTheStartOfBlocks: false
+MaxEmptyLinesToKeep:              1
+ReflowComments:                   true
+...

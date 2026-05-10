@@ -7,4 +7,4 @@ void ui_help_init (void);
 
 void ui_help_draw (void);
 
-#endif // UI_HELP_H
+#endif  // UI_HELP_H

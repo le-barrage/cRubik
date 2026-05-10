@@ -4,10 +4,11 @@
 #include "cube.h"
 #include "queue.h"
 #include "timer.h"
+
 #include <stdbool.h>
 
-#define SOLVER_SOLUTION_MAX_LEN  100
-#define SOLVER_FOUND_TEXT_LEN    80
+#define SOLVER_SOLUTION_MAX_LEN 100
+#define SOLVER_FOUND_TEXT_LEN   80
 
 /* The most recent solver result (or an error message) and the rendered
  * "N moves solution found in ~T ms:" header. The UI reads these directly
@@ -49,4 +50,4 @@ void solver_cancel (void);
  * running, clears the flag and re-enables `timer`. */
 void solver_finish (stopwatch_t *timer);
 
-#endif // SOLVER_H
+#endif  // SOLVER_H

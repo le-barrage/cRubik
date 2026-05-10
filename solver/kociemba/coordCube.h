@@ -2,6 +2,7 @@
 #define COORDCUBE_H
 
 #include "cubieCube.h"
+
 #include <stdio.h>
 
 /** 3^7 possible corner twists (orientations) */
@@ -28,15 +29,15 @@
 #define N_MOVE 18
 
 typedef struct CoordCube {
-  short twist;
-  short flip;
-  short parity;
-  /* UD slice coordinates */
-  short FRtoBR;
-  short URFtoDLF;
-  short URtoUL;
-  short UBtoDF;
-  int URtoDF;
+    short twist;
+    short flip;
+    short parity;
+    /* UD slice coordinates */
+    short FRtoBR;
+    short URFtoDLF;
+    short URtoUL;
+    short UBtoDF;
+    int URtoDF;
 } CoordCube;
 
 extern short twistMove[N_TWIST][N_MOVE];
@@ -54,22 +55,22 @@ extern char Slice_URtoDF_Parity_Prun[N_SLICE2 * N_URtoDF * N_PARITY / 2];
 extern char Slice_Twist_Prun[N_SLICE1 * N_TWIST / 2 + 1];
 extern char Slice_Flip_Prun[N_SLICE1 * N_FLIP / 2];
 
-CoordCube CoordCube_make(CubieCube cubieCube);
+CoordCube CoordCube_make (CubieCube cubieCube);
 
-void init();
-void initTwistMove();
-void initFlipMove();
-void initFRtoBR_Move();
-void initURFtoDLF_Move();
-void initURtoDF_Move();
-void initURtoUL_Move();
-void initUBtoDF_Move();
-void initMergeURtoULandUBtoDF();
-void initSlice_URFtoDLF_Parity_Prun();
-void initSlice_URtoDF_Parity_Prun();
-void initSlice_Twist_Prun();
-void initSlice_Flip_Prun();
-void setPruning(char table[], int index, char value);
-char getPruning(char table[], int index);
+void init ();
+void initTwistMove ();
+void initFlipMove ();
+void initFRtoBR_Move ();
+void initURFtoDLF_Move ();
+void initURtoDF_Move ();
+void initURtoUL_Move ();
+void initUBtoDF_Move ();
+void initMergeURtoULandUBtoDF ();
+void initSlice_URFtoDLF_Parity_Prun ();
+void initSlice_URtoDF_Parity_Prun ();
+void initSlice_Twist_Prun ();
+void initSlice_Flip_Prun ();
+void setPruning (char table[], int index, char value);
+char getPruning (char table[], int index);
 
-#endif // !COORDCUBE_H
+#endif  // !COORDCUBE_H

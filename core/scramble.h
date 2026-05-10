@@ -1,11 +1,10 @@
 #ifndef SCRAMBLE_H
 #define SCRAMBLE_H
 
-typedef enum
-{
-  SCRAMBLE_OK = 0,
-  SCRAMBLE_OOM,
-  SCRAMBLE_BAD_SIZE,
+typedef enum {
+    SCRAMBLE_OK = 0,
+    SCRAMBLE_OOM,
+    SCRAMBLE_BAD_SIZE,
 } scramble_status_t;
 
 /* Default scramble length for an NxNxN cube.
@@ -21,7 +20,6 @@ int scramble_length (int cube_size);
  *
  * `cube_size` must be >= 1. On SCRAMBLE_OOM, any partially-allocated
  * strings are freed and `sequence` is left NULL-filled. */
-scramble_status_t scramble_generate (char **sequence, int length,
-                                     int cube_size);
+scramble_status_t scramble_generate (char **sequence, int length, int cube_size);
 
-#endif // SCRAMBLE_H
+#endif  // SCRAMBLE_H

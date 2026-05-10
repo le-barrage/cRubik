@@ -5,4 +5,4 @@
  * its own BeginDrawing/EndDrawing pair. `frame_count` drives the dot phase. */
 void ui_loading_draw (int frame_count);
 
-#endif // UI_LOADING_H
+#endif  // UI_LOADING_H

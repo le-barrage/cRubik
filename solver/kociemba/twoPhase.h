@@ -21,7 +21,7 @@
   5 Twist error: One corner has to be twisted in pattern
   6 Parity error: Two corners or two edges have to be exchanged in pattern
  */
-char *printErrorMessage(int error);
+char *printErrorMessage (int error);
 
 /**
  * Finds list of moves for solving received cube with no more than maxDepth
@@ -30,42 +30,40 @@ char *printErrorMessage(int error);
  * 			The format is a 54 long string containing the characters
  * U, R, F, D, L and B where each char corresponds to the color of a facelet.
  * 			Faceletes colors should appear in the following order:
- * 			U1 ... U9 R1 ... R9 F1 ... F9 D1 ... D9 L1 ... L9 B1 ... B9 
+ * 			U1 ... U9 R1 ... R9 F1 ... F9 D1 ... D9 L1 ... L9 B1 ... B9
  * param: maxDepth -
  * defines the maximal allowed maneuver length. For random cubes, a maxDepth of
  * 21 usually will returns: a solution in less than 0.5 seconds. With a maxDepth
  * of 20 it takes a few seconds on average to find a solution, but it may take
- * much longer for specific cubes. 
- * param: timeOut - 
- * defines the maximum computing time of the method in seconds. 
- * If it does not returns: with a solution, it returns with an error code. 
- * param: moves - 
- * a list to contain suggested solution moves. If a solution was found, 
- * the list is cleared before adding the required moves to it. Otherwise, the list remains the same. 
- * param: pattern - 
+ * much longer for specific cubes.
+ * param: timeOut -
+ * defines the maximum computing time of the method in seconds.
+ * If it does not returns: with a solution, it returns with an error code.
+ * param: moves -
+ * a list to contain suggested solution moves. If a solution was found,
+ * the list is cleared before adding the required moves to it. Otherwise, the list remains the same.
+ * param: pattern -
  * the desired pattern definition string. The returned list of moves
  * can bring entered cube to this pattern (and not to the standard solved cube).
  * param: depth -
  * stores the total depth of the algorithm.
  * returns: the corresponding error code
  * */
-int findSolution(char *cube, int maxDepth, long timeOut, Move moves[maxDepth],
-                 char *pattern, int *depth);
+int findSolution (char *cube, int maxDepth, long timeOut, Move moves[maxDepth], char *pattern, int *depth);
 
-int findSolutionBasic(char *cube, int maxDepth, long timeOut,
-                      Move moves[maxDepth], int *depth);
+int findSolutionBasic (char *cube, int maxDepth, long timeOut, Move moves[maxDepth], int *depth);
 
 /**
  * Validates input cube string and returns a corresponding error code.
  */
-int validateCubeStringAndInitCubieCube(char *cube, CubieCube *cubieCube);
+int validateCubeStringAndInitCubieCube (char *cube, CubieCube *cubieCube);
 
 /**
  * Creates the list of moves that was found for solving the cube
  * param: moves - the list to contain the moves for solving the cube
  * param: depth - the depth of the solution that was found (number of moves)
  */
-void createMovesList(Move moves[], int depth);
+void createMovesList (Move moves[], int depth);
 
 /**
  * Apply phase2 of algorithm and returns: the combined phase1 and phase2 depth.
@@ -75,12 +73,12 @@ void createMovesList(Move moves[], int depth);
  * param: maxDepth defines the maximal allowed maneuver length
  * returns: total maneuver length
  */
-int totalDepth(int depthPhase1, int maxDepth);
+int totalDepth (int depthPhase1, int maxDepth);
 
 /* Cooperative cancellation: callable from any thread. The next time the
- * IDA* loop reaches its periodic check, findSolution returns -9. 
+ * IDA* loop reaches its periodic check, findSolution returns -9.
  * Both functions are idempotent. */
-void kociemba_request_cancel(void);
-void kociemba_clear_cancel(void);
+void kociemba_request_cancel (void);
+void kociemba_clear_cancel (void);
 
-#endif // !TWOPHASE_H
+#endif  // !TWOPHASE_H

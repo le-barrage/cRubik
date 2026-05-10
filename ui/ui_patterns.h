@@ -2,6 +2,7 @@
 #define UI_PATTERNS_H
 
 #include "queue.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -11,7 +12,6 @@
  * write the formatted move sequence (space-separated tokens) into
  * `out_text`, and return true. Otherwise return false and leave
  * `out_text` untouched. */
-bool ui_patterns_draw (int cube_size, queue_t *queue,
-                       char *out_text, size_t out_size);
+bool ui_patterns_draw (int cube_size, queue_t *queue, char *out_text, size_t out_size);
 
-#endif // UI_PATTERNS_H
+#endif  // UI_PATTERNS_H

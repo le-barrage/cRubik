@@ -17,15 +17,14 @@
  *
  * `just_stopped` is a one-shot handshake flag set by timer_stop. The caller
  * is responsible for resetting it once it has acknowledged the stop. */
-typedef struct
-{
-  int minutes;
-  int seconds;
-  int milliseconds;
-  struct timespec start_time;
-  bool is_running;
-  bool just_stopped;
-  bool is_disabled;
+typedef struct {
+    int minutes;
+    int seconds;
+    int milliseconds;
+    struct timespec start_time;
+    bool is_running;
+    bool just_stopped;
+    bool is_disabled;
 } stopwatch_t;
 
 void timer_start (stopwatch_t *timer);
@@ -34,4 +33,4 @@ void timer_stop (stopwatch_t *timer);
 void timer_disable (stopwatch_t *timer);
 void timer_enable (stopwatch_t *timer);
 
-#endif // TIMER_H
+#endif  // TIMER_H

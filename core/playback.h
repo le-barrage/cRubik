@@ -3,20 +3,19 @@
 
 #include <stdbool.h>
 
-#define PLAYBACK_TEXT_LEN   1024
-#define PLAYBACK_MAX_MOVES  256
+#define PLAYBACK_TEXT_LEN  1024
+#define PLAYBACK_MAX_MOVES 256
 
 /* Tracks an in-progress self-replay of a move sequence (e.g., a Kociemba
  * solution or a saved pattern). The cube renderer reads .text and
  * .current_move_index to highlight the move currently being animated. */
-typedef struct
-{
-  bool active;
-  char text[PLAYBACK_TEXT_LEN];
-  int current_move_index;
-  int pops_per_token[PLAYBACK_MAX_MOVES];
-  int token_count;
-  int pops_remaining;
+typedef struct {
+    bool active;
+    char text[PLAYBACK_TEXT_LEN];
+    int current_move_index;
+    int pops_per_token[PLAYBACK_MAX_MOVES];
+    int token_count;
+    int pops_remaining;
 } playback_t;
 
 extern playback_t playback;
@@ -32,4 +31,4 @@ void playback_advance (void);
 /* Tear down playback state. Called when the move queue drains. */
 void playback_clear (void);
 
-#endif // PLAYBACK_H
+#endif  // PLAYBACK_H

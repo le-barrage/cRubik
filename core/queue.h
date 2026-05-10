@@ -2,17 +2,17 @@
 #define QUEUE_H
 
 #include "cube.h"
+
 #include <stdbool.h>
 
 /* Opaque FIFO queue of move_t values. Construct with queue_create, free
  * with queue_destroy. */
 typedef struct queue queue_t;
 
-typedef enum
-{
-  QUEUE_OK = 0,
-  QUEUE_EMPTY,
-  QUEUE_OOM,
+typedef enum {
+    QUEUE_OK = 0,
+    QUEUE_EMPTY,
+    QUEUE_OOM,
 } queue_status_t;
 
 /* Ownership: queue_create returns a heap-allocated queue. The caller must
@@ -31,4 +31,4 @@ queue_status_t queue_push (queue_t *q, move_t value);
 queue_status_t queue_pop (queue_t *q, move_t *out);
 queue_status_t queue_peek (const queue_t *q, move_t *out);
 
-#endif // QUEUE_H
+#endif  // QUEUE_H

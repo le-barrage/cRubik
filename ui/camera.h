@@ -16,4 +16,4 @@ void camera_init (int cube_size);
  * magnitude proportionally. */
 void camera_update (int cube_size);
 
-#endif // CAMERA_H
+#endif  // CAMERA_H
