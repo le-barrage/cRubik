@@ -1,5 +1,6 @@
 #include "ui_loading.h"
 
+#include "font.h"
 #include "raylib.h"
 #include "utils.h"
 
@@ -16,9 +17,9 @@ ui_loading_draw (int frame_count)
                                  "LOADING..." };
   BeginDrawing ();
   ClearBackground (BACKGROUND_COLOR);
-  int text_w = MeasureText ("LOADING...", LOADING_FONT_SIZE);
-  DrawText (DOTS[phase], GetScreenWidth () / 2 - text_w / 2,
-            GetScreenHeight () / 2 - DEFAULT_FONT_SIZE, LOADING_FONT_SIZE,
-            BLACK);
+  int text_w = font_measure ("LOADING...", LOADING_FONT_SIZE);
+  font_draw (DOTS[phase], GetScreenWidth () / 2 - text_w / 2,
+             GetScreenHeight () / 2 - DEFAULT_FONT_SIZE, LOADING_FONT_SIZE,
+             BLACK);
   EndDrawing ();
 }

@@ -1,6 +1,7 @@
 #include "average.h"
 #include "camera.h"
 #include "cube.h"
+#include "font.h"
 #include "raylib.h"
 #include "keybindings.h"
 #include "logger.h"
@@ -399,24 +400,26 @@ handle_mouse_and_update_camera (void)
 static void
 draw_hint_bar (void)
 {
-  DrawText ("Press 'h' for help.", HINT_MARGIN, HINT_MARGIN, DEFAULT_FONT_SIZE,
-            DARKGRAY);
-  int hint_w = MeasureText ("Press 'o' for options. ", DEFAULT_FONT_SIZE);
-  DrawText ("Press 'o' for options.", GetScreenWidth () - hint_w - HINT_MARGIN,
-            HINT_MARGIN, DEFAULT_FONT_SIZE, DARKGRAY);
-  hint_w = MeasureText ("Press 'p' for patterns. ", DEFAULT_FONT_SIZE);
-  DrawText ("Press 'p' for patterns.", GetScreenWidth () - hint_w - HINT_MARGIN,
-            HINT_MARGIN + DEFAULT_FONT_SIZE, DEFAULT_FONT_SIZE, DARKGRAY);
+  font_draw ("Press 'h' for help.", HINT_MARGIN, HINT_MARGIN,
+             DEFAULT_FONT_SIZE, DARKGRAY);
+  int hint_w = font_measure ("Press 'o' for options. ", DEFAULT_FONT_SIZE);
+  font_draw ("Press 'o' for options.",
+             GetScreenWidth () - hint_w - HINT_MARGIN, HINT_MARGIN,
+             DEFAULT_FONT_SIZE, DARKGRAY);
+  hint_w = font_measure ("Press 'p' for patterns. ", DEFAULT_FONT_SIZE);
+  font_draw ("Press 'p' for patterns.",
+             GetScreenWidth () - hint_w - HINT_MARGIN,
+             HINT_MARGIN + DEFAULT_FONT_SIZE, DEFAULT_FONT_SIZE, DARKGRAY);
 }
 
 static void
 draw_scramble_strip (void)
 {
   const char *scramble_label = "Current scramble:";
-  DrawText (scramble_label,
-            GetScreenWidth () / 2
-                - MeasureText (scramble_label, SCRAMBLE_LABEL_FONT_SIZE) / 2,
-            HINT_MARGIN, SCRAMBLE_LABEL_FONT_SIZE, BLACK);
+  font_draw (scramble_label,
+             GetScreenWidth () / 2
+                 - font_measure (scramble_label, SCRAMBLE_LABEL_FONT_SIZE) / 2,
+             HINT_MARGIN, SCRAMBLE_LABEL_FONT_SIZE, BLACK);
   ui_moves_draw (current_scramble, DEFAULT_FONT_SIZE, SCRAMBLE_MOVES_TOP_Y, -1);
 }
 
@@ -425,21 +428,23 @@ draw_timer_overlay (void)
 {
   timer_update (&timer);
   update_timer_string ();
-  DrawText (timer_string,
-            GetScreenWidth () / 2 - MeasureText ("00:00.00", TIMER_FONT_SIZE) / 2,
-            GetScreenHeight () - TIMER_BOTTOM_Y, TIMER_FONT_SIZE, timer_color);
+  font_draw (timer_string,
+             GetScreenWidth () / 2
+                 - font_measure ("00:00.00", TIMER_FONT_SIZE) / 2,
+             GetScreenHeight () - TIMER_BOTTOM_Y, TIMER_FONT_SIZE, timer_color);
 }
 
 static bool
 draw_solution_panel (void)
 {
   if (solver_current_solution_size != 0)
-    DrawText (solver_solution_found_text,
-              GetScreenWidth () / 2
-                  - MeasureText (solver_solution_found_text, DEFAULT_FONT_SIZE)
-                        / 2,
-              GetScreenHeight () - SOLUTION_FOUND_BOTTOM_Y, DEFAULT_FONT_SIZE,
-              BLACK);
+    font_draw (solver_solution_found_text,
+               GetScreenWidth () / 2
+                   - font_measure (solver_solution_found_text,
+                                   DEFAULT_FONT_SIZE)
+                         / 2,
+               GetScreenHeight () - SOLUTION_FOUND_BOTTOM_Y, DEFAULT_FONT_SIZE,
+               BLACK);
   if (playback.active)
     ui_moves_draw (playback.text, DEFAULT_FONT_SIZE,
                    GetScreenHeight () - SOLUTION_MOVES_BOTTOM_Y,
@@ -470,22 +475,23 @@ draw_solution_panel (void)
     DrawRectangleRounded (rec, APPLY_BUTTON_RADIUS, 0,
                           ColorBrightness (DARKGRAY, REST_LIGHTEN));
   const char *apply = "Apply";
-  float apply_w = MeasureText (apply, DEFAULT_FONT_SIZE);
-  DrawText (apply, rec.x + rec.width / 2 - apply_w / 2,
-            rec.y + rec.height / 2 - DEFAULT_FONT_SIZE / 2,
-            DEFAULT_FONT_SIZE, BLACK);
+  float apply_w = font_measure (apply, DEFAULT_FONT_SIZE);
+  font_draw (apply, rec.x + rec.width / 2 - apply_w / 2,
+             rec.y + rec.height / 2 - DEFAULT_FONT_SIZE / 2,
+             DEFAULT_FONT_SIZE, BLACK);
   return hovering;
 }
 
 static void
 draw_solves_history (void)
 {
-  DrawText ("Ao5:", AO5_LEFT_X, GetScreenHeight () / 2 - AO5_TOP_OFFSET,
-            DEFAULT_FONT_SIZE, BLACK);
-  DrawText (avg,
-            AO5_LEFT_X + MeasureText ("Ao5:", DEFAULT_FONT_SIZE)
-                + AO5_LABEL_GAP,
-            GetScreenHeight () / 2 - AO5_TOP_OFFSET, DEFAULT_FONT_SIZE, BLACK);
+  font_draw ("Ao5:", AO5_LEFT_X, GetScreenHeight () / 2 - AO5_TOP_OFFSET,
+             DEFAULT_FONT_SIZE, BLACK);
+  font_draw (avg,
+             AO5_LEFT_X + font_measure ("Ao5:", DEFAULT_FONT_SIZE)
+                 + AO5_LABEL_GAP,
+             GetScreenHeight () / 2 - AO5_TOP_OFFSET, DEFAULT_FONT_SIZE,
+             BLACK);
 
   int pos_y = TIME_LIST_START_OFFSET;
   for (int i = LAST_N_SOLVES - 1; i >= 0; i--)
@@ -736,6 +742,7 @@ main (int argc, char **argv)
   GuiSetStyle (DEFAULT, TEXT_COLOR_NORMAL, GUI_TEXT_COLOR_NORMAL);
   GuiSetStyle (DEFAULT, TEXT_COLOR_FOCUSED, GUI_TEXT_COLOR_FOCUSED);
   GuiSetStyle (DEFAULT, TEXT_COLOR_PRESSED, GUI_TEXT_COLOR_PRESSED);
+  GuiSetFont (font_get (DEFAULT_FONT_SIZE));
 
   pthread_t thread;
   pthread_create (&thread, NULL, init_everything, &skip_kociemba);
@@ -766,6 +773,8 @@ main (int argc, char **argv)
   free (current_scramble);
   cube_destroy (&cube);
   queue_destroy (queue);
+
+  font_shutdown ();
 
   CloseWindow ();
   return 0;

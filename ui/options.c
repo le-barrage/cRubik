@@ -1,5 +1,6 @@
 #include "options.h"
 #include "cJSON.h"
+#include "font.h"
 #include "raygui.h"
 #include "raylib.h"
 #include "keybindings.h"
@@ -34,7 +35,7 @@
 #define SLIDER_VALUE_GAP  10
 
 #define TOGGLE_Y            550
-#define TOGGLE_GROUP_WIDTH  280
+#define TOGGLE_GROUP_WIDTH  350
 #define TOGGLE_HEIGHT       30
 #define TOGGLE_LABEL_GAP    30
 
@@ -104,9 +105,9 @@ draw_keybindings_ui (int start_y)
   int start_x = (GetScreenWidth () - total_width) / 2;
 
   const char *title = "Key Bindings (click to change):";
-  int title_width = MeasureText (title, DEFAULT_FONT_SIZE);
-  DrawText (title, (GetScreenWidth () - title_width) / 2, start_y,
-            DEFAULT_FONT_SIZE, BLACK);
+  int title_width = font_measure (title, DEFAULT_FONT_SIZE);
+  font_draw (title, (GetScreenWidth () - title_width) / 2, start_y,
+             DEFAULT_FONT_SIZE, BLACK);
 
   int row_y0 = start_y + KEYBIND_TITLE_GAP;
   bool any_hover = false;
@@ -121,9 +122,9 @@ draw_keybindings_ui (int start_y)
                        + KEYBIND_SPACING * 3);
       int y = row_y0 + row * (KEYBIND_BUTTON_HEIGHT + KEYBIND_SPACING);
 
-      DrawText (TextFormat ("%s:", KEYBINDING_ENTRIES[i].name), x,
-                y + (KEYBIND_BUTTON_HEIGHT - DEFAULT_FONT_SIZE) / 2,
-                DEFAULT_FONT_SIZE, BLACK);
+      font_draw (TextFormat ("%s:", KEYBINDING_ENTRIES[i].name), x,
+                 y + (KEYBIND_BUTTON_HEIGHT - DEFAULT_FONT_SIZE) / 2,
+                 DEFAULT_FONT_SIZE, BLACK);
 
       Rectangle button = (Rectangle){
         .x = x + KEYBIND_LABEL_WIDTH,
@@ -150,10 +151,10 @@ draw_keybindings_ui (int start_y)
           = editing ? "Press key..."
                     : keybindings_label (*KEYBINDING_ENTRIES[i].key_ptr);
 
-      int text_w = MeasureText (key_text, DEFAULT_FONT_SIZE);
-      DrawText (key_text, button.x + (button.width - text_w) / 2,
-                button.y + (button.height - DEFAULT_FONT_SIZE) / 2,
-                DEFAULT_FONT_SIZE, editing ? WHITE : BLACK);
+      int text_w = font_measure (key_text, DEFAULT_FONT_SIZE);
+      font_draw (key_text, button.x + (button.width - text_w) / 2,
+                 button.y + (button.height - DEFAULT_FONT_SIZE) / 2,
+                 DEFAULT_FONT_SIZE, editing ? WHITE : BLACK);
 
       if (hovering && IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
         editing_key_index = i;
@@ -192,17 +193,17 @@ draw_rotation_speed_slider (int start_y)
     rotation_speed = (int)r;
 
   const char *label = "Cube Rotation Speed:";
-  DrawText (label,
-            slider.x + (slider.width - MeasureText (label, DEFAULT_FONT_SIZE))
-                           / 2,
-            slider.y - SLIDER_LABEL_GAP, DEFAULT_FONT_SIZE, BLACK);
+  font_draw (label,
+             slider.x + (slider.width - font_measure (label, DEFAULT_FONT_SIZE))
+                            / 2,
+             slider.y - SLIDER_LABEL_GAP, DEFAULT_FONT_SIZE, BLACK);
 
   const char *value = TextFormat ("%d", rotation_speed);
-  DrawText (value,
-            slider.x + (slider.width - MeasureText (value, DEFAULT_FONT_SIZE))
-                           / 2,
-            slider.y + slider.height + SLIDER_VALUE_GAP, DEFAULT_FONT_SIZE,
-            BLACK);
+  font_draw (value,
+             slider.x + (slider.width - font_measure (value, DEFAULT_FONT_SIZE))
+                            / 2,
+             slider.y + slider.height + SLIDER_VALUE_GAP, DEFAULT_FONT_SIZE,
+             BLACK);
 }
 
 static void
@@ -220,16 +221,16 @@ draw_solver_mode_toggle (int start_y)
   solver_mode = (options_solver_mode_t)active;
 
   const char *label = "Solver output:";
-  DrawText (label,
-            (GetScreenWidth () - MeasureText (label, DEFAULT_FONT_SIZE)) / 2,
-            start_y - TOGGLE_LABEL_GAP, DEFAULT_FONT_SIZE, BLACK);
+  font_draw (label,
+             (GetScreenWidth () - font_measure (label, DEFAULT_FONT_SIZE)) / 2,
+             start_y - TOGGLE_LABEL_GAP, DEFAULT_FONT_SIZE, BLACK);
 }
 
 static bool
 draw_reset_button (int y)
 {
   const char *text = "Reset to Defaults";
-  int text_w = MeasureText (text, DEFAULT_FONT_SIZE);
+  int text_w = font_measure (text, DEFAULT_FONT_SIZE);
   int width = text_w + RESET_BUTTON_PADDING_X;
   Rectangle button = (Rectangle){
     .x = (GetScreenWidth () - width) / 2,
@@ -242,9 +243,9 @@ draw_reset_button (int y)
   DrawRectangleRounded (button, 0.2f, 0,
                         hovering ? ColorBrightness (MAROON, HOVER_DARKEN)
                                  : ColorBrightness (MAROON, REST_LIGHTEN));
-  DrawText (text, button.x + (button.width - text_w) / 2,
-            button.y + (button.height - DEFAULT_FONT_SIZE) / 2,
-            DEFAULT_FONT_SIZE, WHITE);
+  font_draw (text, button.x + (button.width - text_w) / 2,
+             button.y + (button.height - DEFAULT_FONT_SIZE) / 2,
+             DEFAULT_FONT_SIZE, WHITE);
 
   if (hovering && IsMouseButtonPressed (MOUSE_LEFT_BUTTON))
     options_reset_to_defaults ();
@@ -266,9 +267,9 @@ options_draw_screen (void)
 {
   ClearBackground (OPTIONS_BG_COLOR);
   const char *exit_hint = "Press 'o' to exit.";
-  int exit_w = MeasureText (exit_hint, DEFAULT_FONT_SIZE);
-  DrawText (exit_hint, GetScreenWidth () - exit_w - EXIT_TEXT_MARGIN,
-            EXIT_TEXT_MARGIN, DEFAULT_FONT_SIZE, DARKGRAY);
+  int exit_w = font_measure (exit_hint, DEFAULT_FONT_SIZE);
+  font_draw (exit_hint, GetScreenWidth () - exit_w - EXIT_TEXT_MARGIN,
+             EXIT_TEXT_MARGIN, DEFAULT_FONT_SIZE, DARKGRAY);
 
   bool hovering = false;
   hovering |= draw_keybindings_ui (KEYBIND_SECTION_Y);

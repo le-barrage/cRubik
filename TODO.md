@@ -1,8 +1,6 @@
 V1.0:
 
-- Be able to retrieve scramble from time storage to do it again.
-
-- generalize kociemba to 2x2 
+- generalize kociemba to 2x2
 
 - generalize patterns to evey cube size
 
@@ -10,15 +8,11 @@ V1.0:
 
 - ~~print corresponding key in options~~ Add more character
 
-- change font ?
-
 - HUGE refactoring (Kociemba left)
 
 - add Ao12/50/100
 
 - look into windows support
-
-- improve arguments handling
 
 Other:
 

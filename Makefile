@@ -35,6 +35,7 @@ SRCS := \
 	core/scramble.c \
 	core/utils.c \
 	ui/camera.c \
+	ui/font.c \
 	ui/options.c \
 	ui/ui_cube.c \
 	ui/ui_help.c \

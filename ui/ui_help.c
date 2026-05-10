@@ -1,5 +1,6 @@
 #include "ui_help.h"
 
+#include "font.h"
 #include "raylib.h"
 #include "utils.h"
 
@@ -36,7 +37,7 @@ ui_help_init (void)
   int max = 0;
   for (int i = 0; i < HELP_TEXTS_COUNT; i++)
     {
-      int t = MeasureText (HELP_TEXTS[i], DEFAULT_FONT_SIZE);
+      int t = font_measure (HELP_TEXTS[i], DEFAULT_FONT_SIZE);
       max = t > max ? t : max;
     }
   help_texts_max_length = max;
@@ -53,12 +54,13 @@ ui_help_draw (void)
               HELP_MIN_FONT_SIZE);
 
   ClearBackground (BACKGROUND_COLOR);
-  DrawText ("Press 'h' to exit.", HINT_MARGIN, HINT_MARGIN, DEFAULT_FONT_SIZE,
-            DARKGRAY);
+  font_draw ("Press 'h' to exit.", HINT_MARGIN, HINT_MARGIN, DEFAULT_FONT_SIZE,
+             DARKGRAY);
   int start_y
       = GetScreenHeight () / 2 - HELP_TEXTS_COUNT / 2 * HELP_LINE_HEIGHT;
   for (int i = 0; i < HELP_TEXTS_COUNT; i++)
-    DrawText (HELP_TEXTS[i],
-              GetScreenWidth () / 2 - MeasureText (HELP_TEXTS[i], font_size) / 2,
-              start_y + i * HELP_LINE_HEIGHT, font_size, BLACK);
+    font_draw (HELP_TEXTS[i],
+               GetScreenWidth () / 2
+                   - font_measure (HELP_TEXTS[i], font_size) / 2,
+               start_y + i * HELP_LINE_HEIGHT, font_size, BLACK);
 }

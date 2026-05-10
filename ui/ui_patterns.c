@@ -1,6 +1,7 @@
 #include "ui_patterns.h"
 
 #include "cube.h"
+#include "font.h"
 #include "raylib.h"
 #include "patterns.h"
 #include "utils.h"
@@ -34,9 +35,9 @@ ui_patterns_draw (int cube_size, queue_t *queue, char *out_text,
                   size_t out_size)
 {
   ClearBackground (BACKGROUND_COLOR);
-  int hint_w = MeasureText ("Press 'p' to exit.", DEFAULT_FONT_SIZE);
-  DrawText ("Press 'p' to exit.", GetScreenWidth () - hint_w - HINT_MARGIN,
-            HINT_MARGIN, DEFAULT_FONT_SIZE, DARKGRAY);
+  int hint_w = font_measure ("Press 'p' to exit.", DEFAULT_FONT_SIZE);
+  font_draw ("Press 'p' to exit.", GetScreenWidth () - hint_w - HINT_MARGIN,
+             HINT_MARGIN, DEFAULT_FONT_SIZE, DARKGRAY);
 
   int start_x
       = (GetScreenWidth ()
@@ -78,10 +79,10 @@ ui_patterns_draw (int cube_size, queue_t *queue, char *out_text,
         }
 
       Color text_color = applicable ? BLACK : LIGHTGRAY;
-      int text_w = MeasureText (PATTERNS[i].name, DEFAULT_FONT_SIZE);
-      DrawText (PATTERNS[i].name, x + (PATTERN_BUTTON_W - text_w) / 2,
-                y + (PATTERN_BUTTON_H - DEFAULT_FONT_SIZE) / 2,
-                DEFAULT_FONT_SIZE, text_color);
+      int text_w = font_measure (PATTERNS[i].name, DEFAULT_FONT_SIZE);
+      font_draw (PATTERNS[i].name, x + (PATTERN_BUTTON_W - text_w) / 2,
+                 y + (PATTERN_BUTTON_H - DEFAULT_FONT_SIZE) / 2,
+                 DEFAULT_FONT_SIZE, text_color);
     }
   SetMouseCursor (any_hover ? MOUSE_CURSOR_POINTING_HAND
                             : MOUSE_CURSOR_DEFAULT);

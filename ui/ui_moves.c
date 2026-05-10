@@ -1,5 +1,6 @@
 #include "ui_moves.h"
 
+#include "font.h"
 #include "raylib.h"
 #include "utils.h"
 
@@ -10,26 +11,20 @@
 #define MOVES_MAX_LINES   16
 #define MOVES_LINE_HEIGHT 30
 
-/* DrawText cursor advance after rendering `s` at x=0.
+/* Cursor x-advance after rendering `s` at x=0.
  *
- * raylib's DrawText advances its internal cursor by (advanceX*scale + spacing)
- * per character, so after N characters the cursor sits at
- *   sum(advanceX)*scale + N*spacing.
- * MeasureText returns the same minus one trailing spacing (it doesn't
- * account for the spacing past the last character) so adding `spacing`
- * once recovers the cursor position. Both formulas keep `spacing` unscaled.
- *
- * If we placed an overlay piece at lineX + MeasureText(prefix) directly,
- * the piece would land `spacing` pixels too far left.
- *
- * `spacing` follows raylib's DrawText default: fontSize/10, clamped >= 1. */
+ * font_draw advances its internal cursor by (advanceX*scale + spacing)
+ * per character, while font_measure returns the same minus one trailing
+ * spacing (no spacing past the last character). Adding `spacing` once
+ * recovers the cursor position. font module uses spacing = max(1, size/10),
+ * matching raylib's DrawText default. */
 static int
 draw_text_cursor_after (const char *s, int font_size)
 {
   int spacing = font_size / 10;
   if (spacing < 1)
     spacing = 1;
-  return MeasureText (s, font_size) + spacing;
+  return font_measure (s, font_size) + spacing;
 }
 
 void
@@ -70,7 +65,7 @@ ui_moves_draw (const char *text, float font_size, int y, int highlight_token)
       memcpy (line_buf + line_len + 1, tokens[i], tlen);
       line_buf[line_len + 1 + tlen] = '\0';
 
-      if (MeasureText (line_buf, font_size) > max_width
+      if (font_measure (line_buf, font_size) > max_width
           && line_count < MOVES_MAX_LINES)
         {
           line_buf[line_len] = '\0';
@@ -103,11 +98,11 @@ ui_moves_draw (const char *text, float font_size, int y, int highlight_token)
         }
       buf[len] = '\0';
 
-      int line_width = MeasureText (buf, font_size);
+      int line_width = font_measure (buf, font_size);
       int line_x = (GetScreenWidth () - line_width) / 2;
       int line_y = y + line * MOVES_LINE_HEIGHT;
 
-      DrawText (buf, line_x, line_y, font_size, BLACK);
+      font_draw (buf, line_x, line_y, font_size, BLACK);
 
       if (highlight_token < start_idx || highlight_token >= end_idx)
         continue;
@@ -128,7 +123,7 @@ ui_moves_draw (const char *text, float font_size, int y, int highlight_token)
 
       char saved = buf[h_offset + h_len];
       buf[h_offset + h_len] = '\0';
-      DrawText (buf + h_offset, overlay_x, line_y, font_size, GOLD);
+      font_draw (buf + h_offset, overlay_x, line_y, font_size, GOLD);
       buf[h_offset + h_len] = saved;
     }
 }
