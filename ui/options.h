@@ -1,6 +1,8 @@
 #ifndef OPTIONS_H
 #define OPTIONS_H
 
+#include <stdbool.h>
+
 typedef enum
 {
   OPTIONS_SOLVER_REORIENT,
@@ -20,5 +22,10 @@ int options_rotation_speed (void);
  * orientation (with prepended X/Y/Z normalization), or remapped to the
  * cube's current visible orientation. */
 options_solver_mode_t options_solver_mode (void);
+
+/* When true, selecting a pattern animates each move through the queue.
+ * When false, the moves are applied to the cube state in one shot with
+ * no animation. */
+bool options_animate_patterns (void);
 
 #endif // OPTIONS_H

@@ -19,6 +19,7 @@
 #define MIN_ROTATION_SPEED 1
 #define MAX_ROTATION_SPEED 30
 #define DEFAULT_SOLVER_MODE OPTIONS_SOLVER_REORIENT
+#define DEFAULT_ANIMATE_PATTERNS true
 
 #define KEYBIND_SECTION_Y       60
 #define KEYBIND_TITLE_GAP       40
@@ -39,6 +40,10 @@
 #define TOGGLE_HEIGHT       30
 #define TOGGLE_LABEL_GAP    30
 
+#define CHECKBOX_Y         620
+#define CHECKBOX_SIZE      20
+#define CHECKBOX_LABEL_GAP 10
+
 #define RESET_BUTTON_HEIGHT     35
 #define RESET_BUTTON_PADDING_X  20
 #define RESET_BUTTON_BOTTOM_Y   60
@@ -54,11 +59,13 @@
 #define JSON_KEY_ROTATION      "rotationSpeed"
 #define JSON_KEY_SOLVER_MODE   "solverOutputMode"
 #define JSON_KEY_KEYBINDINGS   "keybindings"
+#define JSON_KEY_ANIMATE_PATTERNS "animatePatterns"
 #define JSON_VAL_PRESERVE      "preserve"
 #define JSON_VAL_REORIENT      "reorient"
 
 static int rotation_speed = DEFAULT_ROTATION_SPEED;
 static options_solver_mode_t solver_mode = DEFAULT_SOLVER_MODE;
+static bool animate_patterns = DEFAULT_ANIMATE_PATTERNS;
 static int editing_key_index = -1;
 
 int
@@ -71,6 +78,12 @@ options_solver_mode_t
 options_solver_mode (void)
 {
   return solver_mode;
+}
+
+bool
+options_animate_patterns (void)
+{
+  return animate_patterns;
 }
 
 typedef struct
@@ -226,6 +239,21 @@ draw_solver_mode_toggle (int start_y)
              start_y - TOGGLE_LABEL_GAP, DEFAULT_FONT_SIZE, BLACK);
 }
 
+static void
+draw_animate_patterns_checkbox (int y)
+{
+  const char *label = "Animate patterns";
+  int label_w = font_measure (label, DEFAULT_FONT_SIZE);
+  int total_w = CHECKBOX_SIZE + CHECKBOX_LABEL_GAP + label_w;
+  Rectangle box = (Rectangle){
+    .x = (float)(GetScreenWidth () - total_w) / 2,
+    .y = (float)y,
+    .width = CHECKBOX_SIZE,
+    .height = CHECKBOX_SIZE,
+  };
+  GuiCheckBox (box, label, &animate_patterns);
+}
+
 static bool
 draw_reset_button (int y)
 {
@@ -259,6 +287,7 @@ options_reset_to_defaults (void)
   keybindings_init ();
   rotation_speed = DEFAULT_ROTATION_SPEED;
   solver_mode = DEFAULT_SOLVER_MODE;
+  animate_patterns = DEFAULT_ANIMATE_PATTERNS;
   editing_key_index = -1;
 }
 
@@ -275,6 +304,7 @@ options_draw_screen (void)
   hovering |= draw_keybindings_ui (KEYBIND_SECTION_Y);
   draw_rotation_speed_slider (SLIDER_Y);
   draw_solver_mode_toggle (TOGGLE_Y);
+  draw_animate_patterns_checkbox (CHECKBOX_Y);
   hovering |= draw_reset_button (GetScreenHeight () - RESET_BUTTON_BOTTOM_Y);
 
   SetMouseCursor (hovering ? MOUSE_CURSOR_POINTING_HAND
@@ -378,6 +408,10 @@ options_load (void)
   load_solver_mode (root);
   load_keybindings (root);
 
+  cJSON *ap = cJSON_GetObjectItemCaseSensitive (root, JSON_KEY_ANIMATE_PATTERNS);
+  if (cJSON_IsBool (ap))
+    animate_patterns = cJSON_IsTrue (ap);
+
   cJSON_Delete (root);
 }
 
@@ -397,6 +431,7 @@ options_save (void)
                            solver_mode == OPTIONS_SOLVER_PRESERVE
                                ? JSON_VAL_PRESERVE
                                : JSON_VAL_REORIENT);
+  cJSON_AddBoolToObject (root, JSON_KEY_ANIMATE_PATTERNS, animate_patterns);
 
   cJSON *kb = cJSON_AddObjectToObject (root, JSON_KEY_KEYBINDINGS);
   if (kb != NULL)

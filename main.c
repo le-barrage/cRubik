@@ -211,6 +211,19 @@ recompute_solve_stats (void)
 }
 
 static void
+apply_queued_moves_instantly (void)
+{
+  move_t m;
+  while (queue_pop (queue, &m) == QUEUE_OK)
+    {
+      if (m.single_layer)
+        cube_rotate_single_layer (&cube, m.rotation, m.num_layers);
+      else
+        cube_rotate (&cube, m.rotation, m.num_layers);
+    }
+}
+
+static void
 replay_scramble (const char *scramble_str)
 {
   solver_cancel ();
@@ -675,7 +688,10 @@ update_draw_frame (void)
           {
             current_screen = SCREEN_CUBE;
             clear_scramble_and_solution ();
-            playback_init (text);
+            if (options_animate_patterns ())
+              playback_init (text);
+            else
+              apply_queued_moves_instantly ();
           }
       }
       break;
