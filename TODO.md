@@ -10,9 +10,7 @@ V1.0:
 
 - HUGE refactoring (Kociemba left)
 
-- add Ao12/50/100
-
-- look into windows support
+- play patterns or not
 
 Other:
 
@@ -23,3 +21,5 @@ Other:
 - WCA-compliant random-state scrambles like [TNoodle](https://github.com/thewca/tnoodle) (current generator is random-move only)
 
 - optional Korf-style optimal solver: guaranteed shortest solution. Could be a "fast / optimal" toggle alongside Kociemba.
+
+- look into windows support

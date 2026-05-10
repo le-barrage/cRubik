@@ -43,4 +43,8 @@ void solves_toggle_plus_two (int index, int cube_size);
 bool solves_get_scramble (int last_n_index, int cube_size,
                           char *out, size_t out_size);
 
+/* Releases the in-memory cJSON cache. Call once before exit. Safe to
+ * call when no cache has been loaded. */
+void solves_shutdown (void);
+
 #endif // AVERAGE_H

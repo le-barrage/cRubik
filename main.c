@@ -798,6 +798,7 @@ main (int argc, char **argv)
   queue_destroy (queue);
 
   font_shutdown ();
+  solves_shutdown ();
 
   CloseWindow ();
   return 0;

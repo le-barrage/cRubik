@@ -32,7 +32,7 @@ get_solves_filename (char *out, int cube_size)
 }
 
 /* Parses "MM:SS.mmm" into total milliseconds. Caller is responsible for
- * passing a 9-character (or longer) string in that format; behavior is
+ * passing a 9-character (or longer) string in that format, behavior is
  * undefined otherwise. */
 static int
 time_to_ms (const char *time)
@@ -114,6 +114,70 @@ write_json_file (const char *filename, cJSON *json)
     }
   fclose (f);
   return 0;
+}
+
+/* Cache of the parsed solves file for one cube size. The on-disk file
+ * is read once on first access (or when the active cube size changes)
+ * and held in memory, queries (averages, best, scramble lookup) read
+ * from the cache, and modifications (save, +2, DNF toggle) update the
+ * cache and immediately flush it to disk. solves_shutdown frees it. */
+static cJSON *cached_root;
+static int    cached_cube_size = -1;
+
+static void
+clear_cache (void)
+{
+  if (cached_root)
+    {
+      cJSON_Delete (cached_root);
+      cached_root = NULL;
+    }
+  cached_cube_size = -1;
+}
+
+static void
+ensure_cache_loaded (int cube_size)
+{
+  if (cached_root && cached_cube_size == cube_size)
+    return;
+  clear_cache ();
+
+  char filename[FILENAME_MAX_LEN];
+  get_solves_filename (filename, cube_size);
+  cached_root = read_json_file (filename);
+  cached_cube_size = cube_size;
+}
+
+static void
+flush_cache (void)
+{
+  if (!cached_root)
+    return;
+  char filename[FILENAME_MAX_LEN];
+  get_solves_filename (filename, cached_cube_size);
+  write_json_file (filename, cached_root);
+}
+
+static cJSON *
+get_cached_solves_array (int cube_size)
+{
+  ensure_cache_loaded (cube_size);
+  if (!cached_root)
+    return NULL;
+  cJSON *solves = cJSON_GetObjectItemCaseSensitive (cached_root, "solves");
+  if (!cJSON_IsArray (solves))
+    {
+      LOG_ERROR ("cached file for size %d: 'solves' array missing or wrong type",
+                 cube_size);
+      return NULL;
+    }
+  return solves;
+}
+
+void
+solves_shutdown (void)
+{
+  clear_cache ();
 }
 
 static void
@@ -241,12 +305,12 @@ new_solves_root (int cube_size)
 void
 solves_save (const char *time, const char *scramble, int cube_size)
 {
-  char filename[FILENAME_MAX_LEN];
-  get_solves_filename (filename, cube_size);
+  ensure_cache_loaded (cube_size);
 
-  cJSON *root = read_json_file (filename);
-  if (!root)
+  if (!cached_root)
     {
+      char filename[FILENAME_MAX_LEN];
+      get_solves_filename (filename, cube_size);
       FILE *probe = fopen (filename, "rb");
       if (probe)
         {
@@ -261,23 +325,22 @@ solves_save (const char *time, const char *scramble, int cube_size)
             }
         }
 
-      root = new_solves_root (cube_size);
-      if (!root)
+      cached_root = new_solves_root (cube_size);
+      if (!cached_root)
         {
           LOG_ERROR ("%s: out of memory creating solves root", filename);
           return;
         }
+      cached_cube_size = cube_size;
     }
 
-  if (add_solve_entry (root, time, scramble) != 0)
+  if (add_solve_entry (cached_root, time, scramble) != 0)
     {
-      LOG_ERROR ("%s: failed to append solve", filename);
-      cJSON_Delete (root);
+      LOG_ERROR ("size %d: failed to append solve", cube_size);
       return;
     }
 
-  write_json_file (filename, root);
-  cJSON_Delete (root);
+  flush_cache ();
 }
 
 void
@@ -286,19 +349,9 @@ solves_load_last_5 (char times[LAST_N_SOLVES][TIME_STR_MAX], int cube_size)
   for (int i = 0; i < LAST_N_SOLVES; i++)
     strcpy (times[i], "-");
 
-  char filename[FILENAME_MAX_LEN];
-  get_solves_filename (filename, cube_size);
-  cJSON *root = read_json_file (filename);
-  if (!root)
+  cJSON *solves = get_cached_solves_array (cube_size);
+  if (!solves)
     return;
-
-  cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
-  if (!cJSON_IsArray (solves))
-    {
-      LOG_ERROR ("%s: 'solves' array missing or wrong type", filename);
-      cJSON_Delete (root);
-      return;
-    }
 
   int total = cJSON_GetArraySize (solves);
   int n = total < LAST_N_SOLVES ? total : LAST_N_SOLVES;
@@ -314,8 +367,6 @@ solves_load_last_5 (char times[LAST_N_SOLVES][TIME_STR_MAX], int cube_size)
   for (int i = 0; i < LAST_N_SOLVES; i++)
     if (entries[i].valid)
       strcpy (times[i], entries[i].display);
-
-  cJSON_Delete (root);
 }
 
 /* Loads the most recent up-to-`n` solves into `out`. Returns the number
@@ -327,19 +378,9 @@ load_last_n_entries (int n, int cube_size, solve_entry_t *out)
   for (int i = 0; i < n; i++)
     out[i] = (solve_entry_t){ 0 };
 
-  char filename[FILENAME_MAX_LEN];
-  get_solves_filename (filename, cube_size);
-  cJSON *root = read_json_file (filename);
-  if (!root)
+  cJSON *solves = get_cached_solves_array (cube_size);
+  if (!solves)
     return 0;
-
-  cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
-  if (!cJSON_IsArray (solves))
-    {
-      LOG_ERROR ("%s: 'solves' array missing or wrong type", filename);
-      cJSON_Delete (root);
-      return 0;
-    }
 
   int total = cJSON_GetArraySize (solves);
   int count = total < n ? total : n;
@@ -348,7 +389,6 @@ load_last_n_entries (int n, int cube_size, solve_entry_t *out)
   for (int i = 0; i < count; i++)
     parse_solve_json (cJSON_GetArrayItem (solves, start + i), &out[i]);
 
-  cJSON_Delete (root);
   return count;
 }
 
@@ -440,19 +480,9 @@ solves_best_time (int cube_size, char out[AVG_STR_LEN])
 {
   strcpy (out, "-");
 
-  char filename[FILENAME_MAX_LEN];
-  get_solves_filename (filename, cube_size);
-  cJSON *root = read_json_file (filename);
-  if (!root)
+  cJSON *solves = get_cached_solves_array (cube_size);
+  if (!solves)
     return;
-
-  cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
-  if (!cJSON_IsArray (solves))
-    {
-      LOG_ERROR ("%s: 'solves' array missing or wrong type", filename);
-      cJSON_Delete (root);
-      return;
-    }
 
   int total = cJSON_GetArraySize (solves);
   int best_ms = -1;
@@ -465,8 +495,6 @@ solves_best_time (int cube_size, char out[AVG_STR_LEN])
       if (best_ms < 0 || entry.ms < best_ms)
         best_ms = entry.ms;
     }
-
-  cJSON_Delete (root);
 
   if (best_ms >= 0)
     time_format (best_ms, out, AVG_STR_LEN);
@@ -521,35 +549,23 @@ modify_solve_field (int index, int cube_size, field_type_t field)
       return;
     }
 
-  char filename[FILENAME_MAX_LEN];
-  get_solves_filename (filename, cube_size);
-  cJSON *root = read_json_file (filename);
-  if (!root)
+  cJSON *solves = get_cached_solves_array (cube_size);
+  if (!solves)
     return;
-
-  cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
-  if (!cJSON_IsArray (solves))
-    {
-      LOG_ERROR ("%s: 'solves' array missing or wrong type", filename);
-      cJSON_Delete (root);
-      return;
-    }
 
   int total = cJSON_GetArraySize (solves);
   int idx = target_index (index, total);
   if (idx < 0 || idx >= total)
     {
-      LOG_ERROR ("%s: solve index %d out of range (total %d)", filename, idx,
-                 total);
-      cJSON_Delete (root);
+      LOG_ERROR ("size %d: solve index %d out of range (total %d)", cube_size,
+                 idx, total);
       return;
     }
 
   cJSON *solve = cJSON_GetArrayItem (solves, idx);
   if (!solve)
     {
-      LOG_ERROR ("%s: solve at index %d is null", filename, idx);
-      cJSON_Delete (root);
+      LOG_ERROR ("size %d: solve at index %d is null", cube_size, idx);
       return;
     }
 
@@ -567,8 +583,7 @@ modify_solve_field (int index, int cube_size, field_type_t field)
     }
 
   if (status == 0)
-    write_json_file (filename, root);
-  cJSON_Delete (root);
+    flush_cache ();
 }
 
 void
@@ -587,55 +602,39 @@ bool
 solves_get_scramble (int last_n_index, int cube_size, char *out,
                      size_t out_size)
 {
-  char filename[FILENAME_MAX_LEN];
-  get_solves_filename (filename, cube_size);
-  cJSON *root = read_json_file (filename);
-  if (!root)
+  cJSON *solves = get_cached_solves_array (cube_size);
+  if (!solves)
     return false;
-
-  cJSON *solves = cJSON_GetObjectItemCaseSensitive (root, "solves");
-  if (!cJSON_IsArray (solves))
-    {
-      LOG_ERROR ("%s: 'solves' array missing or wrong type", filename);
-      cJSON_Delete (root);
-      return false;
-    }
 
   int total = cJSON_GetArraySize (solves);
   int idx = target_index (last_n_index, total);
   if (idx < 0 || idx >= total)
     {
-      LOG_ERROR ("%s: solve index %d out of range (total %d)", filename, idx,
-                 total);
-      cJSON_Delete (root);
+      LOG_ERROR ("size %d: solve index %d out of range (total %d)", cube_size,
+                 idx, total);
       return false;
     }
 
   cJSON *solve = cJSON_GetArrayItem (solves, idx);
   if (!solve)
     {
-      LOG_ERROR ("%s: solve at index %d is null", filename, idx);
-      cJSON_Delete (root);
+      LOG_ERROR ("size %d: solve at index %d is null", cube_size, idx);
       return false;
     }
 
   const cJSON *scramble = cJSON_GetObjectItemCaseSensitive (solve, "scramble");
   if (!cJSON_IsString (scramble) || !scramble->valuestring)
     {
-      LOG_ERROR ("%s: solve at index %d missing 'scramble' field", filename,
-                 idx);
-      cJSON_Delete (root);
+      LOG_ERROR ("size %d: solve at index %d missing 'scramble' field",
+                 cube_size, idx);
       return false;
     }
   if (strlen (scramble->valuestring) + 1 > out_size)
     {
       LOG_WARN ("solves_get_scramble: out_size %zu too small for scramble (%zu)",
                 out_size, strlen (scramble->valuestring) + 1);
-      cJSON_Delete (root);
       return false;
     }
   snprintf (out, out_size, "%s", scramble->valuestring);
-
-  cJSON_Delete (root);
   return true;
 }
