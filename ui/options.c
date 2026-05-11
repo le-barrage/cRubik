@@ -140,7 +140,7 @@ static bool draw_keybindings_ui (int start_y)
 
         DrawRectangleRounded(button, 0.2f, 0, color);
 
-        const char *key_text = editing ? "Press key..." : keybindings_label(*KEYBINDING_ENTRIES[i].key_ptr);
+        const char *key_text = editing ? "Press key" : keybindings_label(*KEYBINDING_ENTRIES[i].key_ptr);
 
         int text_w = font_measure(key_text, DEFAULT_FONT_SIZE);
         font_draw(key_text, button.x + (button.width - text_w) / 2, button.y + (button.height - DEFAULT_FONT_SIZE) / 2,

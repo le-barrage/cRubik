@@ -1,20 +1,19 @@
 CC := gcc
 CFLAGS := -Wall -Wextra -Wno-unused-result -O2
-CFLAGS += -I./core -I./ui -I./solver -I./vendor
+CFLAGS += -I./core -I./ui -I./solver -isystem ./vendor
 LDFLAGS := -L./vendor
 LDLIBS := -lraylib -lm -pthread
 
 # Debug flags (use: make DEBUG=1)
 ifdef DEBUG
 	CFLAGS := -Wall -Wextra -Wno-unused-result -g -O0 \
-	          -I./core -I./ui -I./solver -I./vendor
+	          -I./core -I./ui -I./solver -isystem ./vendor
 endif
 
 TARGET := cRubik
 BENCH_TARGET := bench
 
 SRCS := \
-	vendor/raygui.c \
 	vendor/cJSON.c \
 	solver/kociemba/twoPhase.c \
 	solver/kociemba/move.c \

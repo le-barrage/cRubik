@@ -10,6 +10,7 @@
 #include "raylib.h"
 #include "scramble.h"
 #include "solver.h"
+// #include "style_amber.h"
 #include "time_consts.h"
 #include "timer.h"
 #include "ui_cube.h"
@@ -385,7 +386,7 @@ static void handle_mouse_and_update_camera (void)
 #define STATS_LINE_HEIGHT        30
 #define TIME_LIST_LINE_HEIGHT    30
 #define TIME_LIST_START_OFFSET   (-2)
-#define TIME_DETAIL_W            350
+#define TIME_DETAIL_W            450
 #define TIME_DETAIL_H            100
 #define APPLY_BUTTON_W           100
 #define APPLY_BUTTON_H           30
@@ -693,6 +694,7 @@ int main (int argc, char **argv)
     SetWindowMinSize(WINDOW_MIN_W, WINDOW_MIN_H);
     SetTargetFPS(TARGET_FPS);
 
+    // GuiLoadStyleAmber();
     GuiSetStyle(DEFAULT, TEXT_SIZE, DEFAULT_FONT_SIZE);
     GuiSetStyle(DEFAULT, TEXT_SPACING, GUI_TEXT_SPACING);
     GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, GUI_TEXT_COLOR_NORMAL);
