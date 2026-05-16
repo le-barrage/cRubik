@@ -1,3 +1,4 @@
+#include "amber.h"
 #include "average.h"
 #include "camera.h"
 #include "cube.h"
@@ -458,6 +459,7 @@ static void draw_solves_history (bool *out_hover)
     draw_stat_line("Ao5: ", avg, y0);
 
     bool any_hover = false;
+    bool was_open  = is_time_detail_open;
     int pos_y      = TIME_LIST_START_OFFSET;
     for (int i = LAST_N_SOLVES - 1; i >= 0; i--) {
         if (times[i][0] == '-') continue;
@@ -467,13 +469,17 @@ static void draw_solves_history (bool *out_hover)
             font_measure(times[i], DEFAULT_FONT_SIZE),
             DEFAULT_FONT_SIZE,
         };
-        bool hov;
-        if (label_button_draw(bounds, times[i], DEFAULT_FONT_SIZE, &hov)) {
-            is_time_detail_open = !is_time_detail_open;
-            time_detail_index   = i;
-            time_detail_pos_y   = pos_y;
+        if (is_time_detail_open) {
+            font_draw(times[i], (int)bounds.x, (int)bounds.y, DEFAULT_FONT_SIZE, BLACK);
+        } else {
+            bool hov;
+            if (label_button_draw(bounds, times[i], DEFAULT_FONT_SIZE, &hov)) {
+                is_time_detail_open = true;
+                time_detail_index   = i;
+                time_detail_pos_y   = pos_y;
+            }
+            any_hover |= hov;
         }
-        any_hover |= hov;
         pos_y++;
     }
 
@@ -482,29 +488,33 @@ static void draw_solves_history (bool *out_hover)
         return;
     }
 
+    Rectangle dialog_bounds
+        = { AO5_LEFT_X, (float)GetScreenHeight() / 2 + (time_detail_pos_y + 1) * TIME_LIST_LINE_HEIGHT, TIME_DETAIL_W,
+            TIME_DETAIL_H };
     bool dialog_hov;
-    int result = message_box_draw(
-        (Rectangle){ AO5_LEFT_X, (float)GetScreenHeight() / 2 + (time_detail_pos_y + 1) * TIME_LIST_LINE_HEIGHT,
-                     TIME_DETAIL_W, TIME_DETAIL_H },
-        "Time details", times[time_detail_index], "Cancel;+2;DNF;Replay", &dialog_hov);
+    int result = message_box_draw(dialog_bounds, "Time details", times[time_detail_index], "Cancel;+2;DNF;Replay",
+                                  &dialog_hov);
     any_hover |= dialog_hov;
     if (!result || result == 1)
-        is_time_detail_open = !is_time_detail_open;
+        is_time_detail_open = false;
     else if (result == 2) {
         solves_toggle_plus_two(time_detail_index, cube.size);
         solves_load_last_5(times, cube.size);
         recompute_solve_stats();
-        is_time_detail_open = !is_time_detail_open;
+        is_time_detail_open = false;
     } else if (result == 3) {
         solves_toggle_dnf(time_detail_index, cube.size);
         solves_load_last_5(times, cube.size);
         recompute_solve_stats();
-        is_time_detail_open = !is_time_detail_open;
+        is_time_detail_open = false;
     } else if (result == 4) {
         char scramble_buf[CURRENT_SCRAMBLE_TOK_LEN * scramble_length(cube.size) + 1];
         if (solves_get_scramble(time_detail_index, cube.size, scramble_buf, sizeof scramble_buf))
             replay_scramble(scramble_buf);
-        is_time_detail_open = !is_time_detail_open;
+        is_time_detail_open = false;
+    } else if (was_open && result < 0 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)
+               && !CheckCollisionPointRec(GetMousePosition(), dialog_bounds)) {
+        is_time_detail_open = false;
     }
     if (out_hover) *out_hover = any_hover;
 }
