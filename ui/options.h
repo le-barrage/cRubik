@@ -8,7 +8,10 @@ typedef enum {
     OPTIONS_SOLVER_PRESERVE,
 } options_solver_mode_t;
 
-void options_draw_screen (void);
+/* Renders the options screen. Writes hover state to `*out_hover` (may
+ * be NULL) so the caller can aggregate cursor management across
+ * overlays. */
+void options_draw_screen (bool *out_hover);
 void options_reset_to_defaults (void);
 void options_load (void);
 void options_save (void);

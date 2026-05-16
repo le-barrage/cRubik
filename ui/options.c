@@ -98,7 +98,7 @@ static const keybinding_entry_t KEYBINDING_ENTRIES[] = {
 };
 #define KEYBINDING_COUNT ARRAY_LEN(KEYBINDING_ENTRIES)
 
-static bool draw_keybindings_ui (int start_y)
+static void draw_keybindings_ui (int start_y, bool *out_hover)
 {
     int total_width = KEYBIND_COLUMNS * (KEYBIND_LABEL_WIDTH + KEYBIND_BUTTON_WIDTH + KEYBIND_SPACING * 2);
     int start_x     = (GetScreenWidth() - total_width) / 2;
@@ -158,7 +158,7 @@ static bool draw_keybindings_ui (int start_y)
         if (IsKeyPressed(KEY_ESCAPE)) editing_key_index = -1;
     }
 
-    return any_hover;
+    if (out_hover) *out_hover = any_hover;
 }
 
 static void draw_rotation_speed_slider (int start_y)
@@ -216,7 +216,7 @@ static void draw_animate_patterns_checkbox (int y)
     GuiCheckBox(box, label, &animate_patterns);
 }
 
-static bool draw_reset_button (int y)
+static void draw_reset_button (int y, bool *out_hover)
 {
     const char *text = "Reset to Defaults";
     int text_w       = font_measure(text, DEFAULT_FONT_SIZE);
@@ -235,8 +235,7 @@ static bool draw_reset_button (int y)
               DEFAULT_FONT_SIZE, WHITE);
 
     if (hovering && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) options_reset_to_defaults();
-
-    return hovering;
+    if (out_hover) *out_hover = hovering;
 }
 
 void options_reset_to_defaults (void)
@@ -248,21 +247,23 @@ void options_reset_to_defaults (void)
     editing_key_index = -1;
 }
 
-void options_draw_screen (void)
+void options_draw_screen (bool *out_hover)
 {
     ClearBackground(OPTIONS_BG_COLOR);
     const char *exit_hint = "Press 'o' to exit.";
     int exit_w            = font_measure(exit_hint, DEFAULT_FONT_SIZE);
     font_draw(exit_hint, GetScreenWidth() - exit_w - EXIT_TEXT_MARGIN, EXIT_TEXT_MARGIN, DEFAULT_FONT_SIZE, DARKGRAY);
 
-    bool hovering = false;
-    hovering |= draw_keybindings_ui(KEYBIND_SECTION_Y);
+    bool hovering = false, sub_hov;
+    draw_keybindings_ui(KEYBIND_SECTION_Y, &sub_hov);
+    hovering |= sub_hov;
     draw_rotation_speed_slider(SLIDER_Y);
     draw_solver_mode_toggle(TOGGLE_Y);
     draw_animate_patterns_checkbox(CHECKBOX_Y);
-    hovering |= draw_reset_button(GetScreenHeight() - RESET_BUTTON_BOTTOM_Y);
+    draw_reset_button(GetScreenHeight() - RESET_BUTTON_BOTTOM_Y, &sub_hov);
+    hovering |= sub_hov;
 
-    SetMouseCursor(hovering ? MOUSE_CURSOR_POINTING_HAND : MOUSE_CURSOR_DEFAULT);
+    if (out_hover) *out_hover = hovering;
 }
 
 static char *read_file_to_string (const char *path)

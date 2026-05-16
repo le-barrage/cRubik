@@ -10,7 +10,6 @@
 #include "raylib.h"
 #include "scramble.h"
 #include "solver.h"
-// #include "style_amber.h"
 #include "time_consts.h"
 #include "timer.h"
 #include "ui_cube.h"
@@ -19,6 +18,7 @@
 #include "ui_moves.h"
 #include "ui_patterns.h"
 #include "utils.h"
+#include "widgets.h"
 
 #include <getopt.h>
 #include <pthread.h>
@@ -368,14 +368,12 @@ static void handle_mouse_and_update_camera (void)
 
 /* ----- Cube-screen layout shared with hints --------------------------- */
 
-#define HINT_MARGIN  10
-#define HOVER_DARKEN -0.1f
-#define REST_LIGHTEN 0.1f
+#define HINT_MARGIN 10
 
 /* ----- Cube screen ---------------------------------------------------- */
 
 #define SCRAMBLE_LABEL_FONT_SIZE 35
-#define SCRAMBLE_MOVES_TOP_Y     50
+#define SCRAMBLE_MOVES_TOP_Y     75
 #define TIMER_FONT_SIZE          45
 #define TIMER_BOTTOM_Y           50
 #define SOLUTION_FOUND_BOTTOM_Y  130
@@ -391,7 +389,6 @@ static void handle_mouse_and_update_camera (void)
 #define APPLY_BUTTON_W           100
 #define APPLY_BUTTON_H           30
 #define APPLY_BUTTON_BOTTOM_Y    75
-#define APPLY_BUTTON_RADIUS      0.5f
 
 static void draw_hint_bar (void)
 {
@@ -420,8 +417,10 @@ static void draw_timer_overlay (void)
               GetScreenHeight() - TIMER_BOTTOM_Y, TIMER_FONT_SIZE, timer_color);
 }
 
-static bool draw_solution_panel (void)
+static void draw_solution_panel (bool *out_hover)
 {
+    bool hov = false;
+
     if (solver_current_solution_size != 0)
         font_draw(solver_solution_found_text,
                   GetScreenWidth() / 2 - font_measure(solver_solution_found_text, DEFAULT_FONT_SIZE) / 2,
@@ -432,26 +431,17 @@ static bool draw_solution_panel (void)
     else
         ui_moves_draw(solver_current_solution, DEFAULT_FONT_SIZE, GetScreenHeight() - SOLUTION_MOVES_BOTTOM_Y, -1);
 
-    if (solver_current_solution_size <= 0) return false;
+    if (solver_current_solution_size > 0) {
+        Rectangle rec = (Rectangle){
+            .x      = GetScreenWidth() - 2 * APPLY_BUTTON_W,
+            .y      = GetScreenHeight() - APPLY_BUTTON_BOTTOM_Y,
+            .width  = APPLY_BUTTON_W,
+            .height = APPLY_BUTTON_H,
+        };
+        if (button_draw(rec, "Apply", &hov)) solver_apply_current(queue, &timer);
+    }
 
-    Rectangle rec = (Rectangle){
-        .x      = GetScreenWidth() - 2 * APPLY_BUTTON_W,
-        .y      = GetScreenHeight() - APPLY_BUTTON_BOTTOM_Y,
-        .width  = APPLY_BUTTON_W,
-        .height = APPLY_BUTTON_H,
-    };
-    bool hovering = CheckCollisionPointRec(GetMousePosition(), rec);
-
-    if (hovering) {
-        DrawRectangleRounded(rec, APPLY_BUTTON_RADIUS, 0, ColorBrightness(DARKGRAY, HOVER_DARKEN));
-        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) solver_apply_current(queue, &timer);
-    } else
-        DrawRectangleRounded(rec, APPLY_BUTTON_RADIUS, 0, ColorBrightness(DARKGRAY, REST_LIGHTEN));
-    const char *apply = "Apply";
-    float apply_w     = font_measure(apply, DEFAULT_FONT_SIZE);
-    font_draw(apply, rec.x + rec.width / 2 - apply_w / 2, rec.y + rec.height / 2 - DEFAULT_FONT_SIZE / 2,
-              DEFAULT_FONT_SIZE, BLACK);
-    return hovering;
+    if (out_hover) *out_hover = hov;
 }
 
 static void draw_stat_line (const char *label, const char *value, int y)
@@ -460,32 +450,44 @@ static void draw_stat_line (const char *label, const char *value, int y)
     font_draw(value, AO5_LEFT_X + font_measure(label, DEFAULT_FONT_SIZE) + AO5_LABEL_GAP, y, DEFAULT_FONT_SIZE, BLACK);
 }
 
-static void draw_solves_history (void)
+static void draw_solves_history (bool *out_hover)
 {
     int y0 = GetScreenHeight() / 2 - AO5_TOP_OFFSET;
     draw_stat_line("Best:", best, y0 - 2 * STATS_LINE_HEIGHT);
     draw_stat_line("Ao12:", avg12, y0 - STATS_LINE_HEIGHT);
     draw_stat_line("Ao5: ", avg, y0);
 
-    int pos_y = TIME_LIST_START_OFFSET;
+    bool any_hover = false;
+    int pos_y      = TIME_LIST_START_OFFSET;
     for (int i = LAST_N_SOLVES - 1; i >= 0; i--) {
         if (times[i][0] == '-') continue;
-        if (GuiLabelButton((Rectangle){ AO5_LEFT_X, (float)GetScreenHeight() / 2 + pos_y * TIME_LIST_LINE_HEIGHT,
-                                        MeasureText(times[i], DEFAULT_FONT_SIZE), DEFAULT_FONT_SIZE },
-                           times[i])) {
+        Rectangle bounds = (Rectangle){
+            AO5_LEFT_X,
+            (float)GetScreenHeight() / 2 + pos_y * TIME_LIST_LINE_HEIGHT,
+            font_measure(times[i], DEFAULT_FONT_SIZE),
+            DEFAULT_FONT_SIZE,
+        };
+        bool hov;
+        if (label_button_draw(bounds, times[i], DEFAULT_FONT_SIZE, &hov)) {
             is_time_detail_open = !is_time_detail_open;
             time_detail_index   = i;
             time_detail_pos_y   = pos_y;
         }
+        any_hover |= hov;
         pos_y++;
     }
 
-    if (!is_time_detail_open) return;
+    if (!is_time_detail_open) {
+        if (out_hover) *out_hover = any_hover;
+        return;
+    }
 
-    int result = GuiMessageBox(
+    bool dialog_hov;
+    int result = message_box_draw(
         (Rectangle){ AO5_LEFT_X, (float)GetScreenHeight() / 2 + (time_detail_pos_y + 1) * TIME_LIST_LINE_HEIGHT,
                      TIME_DETAIL_W, TIME_DETAIL_H },
-        "Time details", times[time_detail_index], "Cancel;+2;DNF;Replay");
+        "Time details", times[time_detail_index], "Cancel;+2;DNF;Replay", &dialog_hov);
+    any_hover |= dialog_hov;
     if (!result || result == 1)
         is_time_detail_open = !is_time_detail_open;
     else if (result == 2) {
@@ -504,17 +506,19 @@ static void draw_solves_history (void)
             replay_scramble(scramble_buf);
         is_time_detail_open = !is_time_detail_open;
     }
+    if (out_hover) *out_hover = any_hover;
 }
 
-static void draw_cube_screen (void)
+static void draw_cube_screen (bool *out_hover)
 {
     ui_cube_3d_draw(&cube, show_debug_axes);
     draw_hint_bar();
     draw_scramble_strip();
     draw_timer_overlay();
-    bool any_hover = draw_solution_panel();
-    draw_solves_history();
-    SetMouseCursor(any_hover ? MOUSE_CURSOR_POINTING_HAND : MOUSE_CURSOR_DEFAULT);
+    bool sol_hov, hist_hov;
+    draw_solution_panel(&sol_hov);
+    draw_solves_history(&hist_hov);
+    if (out_hover) *out_hover = sol_hov || hist_hov;
 }
 
 /* ----- Bootstrap ----------------------------------------------------- */
@@ -579,16 +583,17 @@ void update_draw_frame (void)
     }
 
     BeginDrawing();
+    bool any_hover = false;
     switch (current_screen) {
         case SCREEN_HELP:
             ui_help_draw();
             break;
         case SCREEN_OPTIONS:
-            options_draw_screen();
+            options_draw_screen(&any_hover);
             break;
         case SCREEN_PATTERNS: {
             char text[PLAYBACK_TEXT_LEN];
-            if (ui_patterns_draw(cube.size, queue, text, sizeof text)) {
+            if (ui_patterns_draw(cube.size, queue, text, sizeof text, &any_hover)) {
                 current_screen = SCREEN_CUBE;
                 clear_scramble_and_solution();
                 if (options_animate_patterns())
@@ -598,20 +603,23 @@ void update_draw_frame (void)
             }
         } break;
         case SCREEN_CUBE:
-            draw_cube_screen();
+            draw_cube_screen(&any_hover);
             break;
     }
     if (show_exit_message_box) {
-        int result = GuiMessageBox((Rectangle){ (float)GetScreenWidth() / 2 - EXIT_DIALOG_HALF_W,
-                                                (float)GetScreenHeight() / 2 - EXIT_DIALOG_HALF_H / 2, EXIT_DIALOG_W,
-                                                EXIT_DIALOG_H },
-                                   "#191#Exit", "Do you really want to quit ?", "Yes;No");
+        bool dialog_hov;
+        int result = message_box_draw((Rectangle){ (float)GetScreenWidth() / 2 - EXIT_DIALOG_HALF_W,
+                                                   (float)GetScreenHeight() / 2 - EXIT_DIALOG_HALF_H / 2, EXIT_DIALOG_W,
+                                                   EXIT_DIALOG_H },
+                                      "Exit", "Do you really want to quit ?", "Yes;No", &dialog_hov);
+        any_hover |= dialog_hov;
 
         if (result == 1)
             exit_program = true;
         else if (result == 2 || result == 0)
             show_exit_message_box = false;
     }
+    SetMouseCursor(any_hover ? MOUSE_CURSOR_POINTING_HAND : MOUSE_CURSOR_DEFAULT);
     EndDrawing();
 }
 
@@ -694,12 +702,12 @@ int main (int argc, char **argv)
     SetWindowMinSize(WINDOW_MIN_W, WINDOW_MIN_H);
     SetTargetFPS(TARGET_FPS);
 
-    // GuiLoadStyleAmber();
+    GuiLoadStyleAmber();
     GuiSetStyle(DEFAULT, TEXT_SIZE, DEFAULT_FONT_SIZE);
     GuiSetStyle(DEFAULT, TEXT_SPACING, GUI_TEXT_SPACING);
-    GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, GUI_TEXT_COLOR_NORMAL);
-    GuiSetStyle(DEFAULT, TEXT_COLOR_FOCUSED, GUI_TEXT_COLOR_FOCUSED);
-    GuiSetStyle(DEFAULT, TEXT_COLOR_PRESSED, GUI_TEXT_COLOR_PRESSED);
+    // GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, GUI_TEXT_COLOR_NORMAL);
+    // GuiSetStyle(DEFAULT, TEXT_COLOR_FOCUSED, GUI_TEXT_COLOR_FOCUSED);
+    // GuiSetStyle(DEFAULT, TEXT_COLOR_PRESSED, GUI_TEXT_COLOR_PRESSED);
     GuiSetFont(font_get(DEFAULT_FONT_SIZE));
 
     pthread_t thread;

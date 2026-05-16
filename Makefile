@@ -41,6 +41,7 @@ SRCS := \
 	ui/ui_loading.c \
 	ui/ui_moves.c \
 	ui/ui_patterns.c \
+	ui/widgets.c \
 	main.c
 
 BENCH_SRCS := \

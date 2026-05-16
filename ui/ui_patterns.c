@@ -26,7 +26,7 @@ static bool pattern_applies (const pattern_t *p, int cube_size)
     return true;
 }
 
-bool ui_patterns_draw (int cube_size, queue_t *queue, char *out_text, size_t out_size)
+bool ui_patterns_draw (int cube_size, queue_t *queue, char *out_text, size_t out_size, bool *out_hover)
 {
     ClearBackground(BACKGROUND_COLOR);
     int hint_w = font_measure("Press 'p' to exit.", DEFAULT_FONT_SIZE);
@@ -68,6 +68,6 @@ bool ui_patterns_draw (int cube_size, queue_t *queue, char *out_text, size_t out
         font_draw(PATTERNS[i].name, x + (PATTERN_BUTTON_W - text_w) / 2, y + (PATTERN_BUTTON_H - DEFAULT_FONT_SIZE) / 2,
                   DEFAULT_FONT_SIZE, text_color);
     }
-    SetMouseCursor(any_hover ? MOUSE_CURSOR_POINTING_HAND : MOUSE_CURSOR_DEFAULT);
+    if (out_hover) *out_hover = any_hover;
     return selected;
 }
