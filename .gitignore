@@ -6,3 +6,4 @@ times/*
 build/*
 options.json
 options.json.tmp
+.clangd

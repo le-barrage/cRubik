@@ -178,7 +178,7 @@ bool toggle_group_draw (Rectangle bounds, const char *labels, int *active, bool 
             text   = AMBER_TEXT_NORMAL;
         }
         DrawRectangleRounded(r, BUTTON_RADIUS, 0, base);
-        DrawRectangleRoundedLines(r, BUTTON_RADIUS, 0, TOGGLE_BORDER_THICK, border);
+        DrawRectangleRoundedLinesEx(r, BUTTON_RADIUS, 0, TOGGLE_BORDER_THICK, border);
 
         int text_w = font_measure(label, DEFAULT_FONT_SIZE);
         font_draw(label, (int)(r.x + (r.width - text_w) / 2), (int)(r.y + (r.height - DEFAULT_FONT_SIZE) / 2),
