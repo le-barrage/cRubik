@@ -27,4 +27,11 @@ bool button_draw (Rectangle bounds, const char *label, bool *out_hover);
  *    1..N if button i (1-indexed, left-to-right) was clicked */
 int message_box_draw (Rectangle bounds, const char *title, const char *message, const char *buttons, bool *out_hover);
 
+/* Mutually-exclusive button group laid out horizontally across `bounds`.
+ * `labels` is semicolon-separated (e.g. "On;Off"); each label gets an
+ * equal-width slice. `*active` is the currently selected index (0-based)
+ * and is updated when the user picks a different one. Returns true if
+ * the selection changed this frame. */
+bool toggle_group_draw (Rectangle bounds, const char *labels, int *active, bool *out_hover);
+
 #endif  // UI_WIDGETS_H

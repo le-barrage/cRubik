@@ -6,6 +6,7 @@
 #include "logger.h"
 #include "raygui.h"
 #include "raylib.h"
+#include "widgets.h"
 #include "utils.h"
 
 #include <stdio.h>
@@ -184,18 +185,18 @@ static void draw_rotation_speed_slider (int start_y)
               slider.y + slider.height + SLIDER_VALUE_GAP, DEFAULT_FONT_SIZE, BLACK);
 }
 
-static void draw_solver_mode_toggle (int start_y)
+static void draw_solver_mode_toggle (int start_y, bool *out_hover)
 {
     Rectangle bounds = (Rectangle){
         .x      = (float)(GetScreenWidth() - TOGGLE_GROUP_WIDTH) / 2,
         .y      = (float)start_y,
-        .width  = (float)TOGGLE_GROUP_WIDTH / 2,
+        .width  = TOGGLE_GROUP_WIDTH,
         .height = TOGGLE_HEIGHT,
     };
 
     int active = (int)solver_mode;
-    GuiToggleGroup(bounds, "Re-orient cube;Preserve view", &active);
-    solver_mode = (options_solver_mode_t)active;
+    if (toggle_group_draw(bounds, "Re-orient cube;Preserve view", &active, out_hover))
+        solver_mode = (options_solver_mode_t)active;
 
     const char *label = "Solver output:";
     font_draw(label, (GetScreenWidth() - font_measure(label, DEFAULT_FONT_SIZE)) / 2, start_y - TOGGLE_LABEL_GAP,
@@ -258,7 +259,8 @@ void options_draw_screen (bool *out_hover)
     draw_keybindings_ui(KEYBIND_SECTION_Y, &sub_hov);
     hovering |= sub_hov;
     draw_rotation_speed_slider(SLIDER_Y);
-    draw_solver_mode_toggle(TOGGLE_Y);
+    draw_solver_mode_toggle(TOGGLE_Y, &sub_hov);
+    hovering |= sub_hov;
     draw_animate_patterns_checkbox(CHECKBOX_Y);
     draw_reset_button(GetScreenHeight() - RESET_BUTTON_BOTTOM_Y, &sub_hov);
     hovering |= sub_hov;

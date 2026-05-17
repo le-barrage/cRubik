@@ -27,6 +27,21 @@
 #define MSGBOX_MSG_FG       BLACK
 #define MSGBOX_MAX_LABEL    32
 
+#define TOGGLE_BUTTON_GAP   4
+#define TOGGLE_BORDER_THICK 2.f
+#define TOGGLE_MAX_LABEL    32
+
+/* Amber palette (mirrors vendor/amber.h DEFAULT control colors). */
+static const Color AMBER_BORDER_NORMAL  = { 0x89, 0x89, 0x88, 0xff };
+static const Color AMBER_BASE_NORMAL    = { 0x29, 0x29, 0x29, 0xff };
+static const Color AMBER_TEXT_NORMAL    = { 0xd4, 0xd4, 0xd4, 0xff };
+static const Color AMBER_BORDER_FOCUSED = { 0xeb, 0x89, 0x1d, 0xff };
+static const Color AMBER_BASE_FOCUSED   = { 0x29, 0x29, 0x29, 0xff };
+static const Color AMBER_TEXT_FOCUSED   = { 0xff, 0xff, 0xff, 0xff };
+static const Color AMBER_BORDER_PRESSED = { 0xf1, 0xcf, 0x9d, 0xff };
+static const Color AMBER_BASE_PRESSED   = { 0xf3, 0x93, 0x33, 0xff };
+static const Color AMBER_TEXT_PRESSED   = { 0x19, 0x14, 0x10, 0xff };
+
 static bool label_button_draw_colored (Rectangle bounds, const char *label, int font_size, Color rest, Color hover,
                                        bool *out_hover)
 {
@@ -79,8 +94,7 @@ int message_box_draw (Rectangle bounds, const char *title, const char *message, 
         MSGBOX_CLOSE_SIZE,
     };
     bool close_hov;
-    if (label_button_draw_colored(close_btn, "X", DEFAULT_FONT_SIZE, MSGBOX_TITLE_FG, GRAY, &close_hov))
-        result = 0;
+    if (label_button_draw_colored(close_btn, "X", DEFAULT_FONT_SIZE, MSGBOX_TITLE_FG, GRAY, &close_hov)) result = 0;
     any_hover |= close_hov;
 
     int btn_y      = (int)bounds.y + (int)bounds.height - MSGBOX_BUTTON_H - MSGBOX_PADDING;
@@ -120,4 +134,66 @@ int message_box_draw (Rectangle bounds, const char *title, const char *message, 
 
     if (out_hover) *out_hover = any_hover;
     return result;
+}
+
+bool toggle_group_draw (Rectangle bounds, const char *labels, int *active, bool *out_hover)
+{
+    bool any_hover = false;
+    bool changed   = false;
+
+    int btn_count = 1;
+    for (const char *p = labels; *p; p++)
+        if (*p == ';') btn_count++;
+
+    int btn_w = ((int)bounds.width - TOGGLE_BUTTON_GAP * (btn_count - 1)) / btn_count;
+    int btn_x = (int)bounds.x;
+
+    const char *start = labels;
+    for (int i = 0; i < btn_count; i++) {
+        const char *end = strchr(start, ';');
+        if (!end) end = start + strlen(start);
+        int len = (int)(end - start);
+        if (len >= TOGGLE_MAX_LABEL) len = TOGGLE_MAX_LABEL - 1;
+
+        char label[TOGGLE_MAX_LABEL];
+        memcpy(label, start, len);
+        label[len] = '\0';
+
+        Rectangle r    = { btn_x, bounds.y, btn_w, bounds.height };
+        bool hov       = CheckCollisionPointRec(GetMousePosition(), r);
+        bool is_active = (i == *active);
+
+        Color base, border, text;
+        if (is_active) {
+            base   = AMBER_BASE_PRESSED;
+            border = AMBER_BORDER_PRESSED;
+            text   = AMBER_TEXT_PRESSED;
+        } else if (hov) {
+            base   = AMBER_BASE_FOCUSED;
+            border = AMBER_BORDER_FOCUSED;
+            text   = AMBER_TEXT_FOCUSED;
+        } else {
+            base   = AMBER_BASE_NORMAL;
+            border = AMBER_BORDER_NORMAL;
+            text   = AMBER_TEXT_NORMAL;
+        }
+        DrawRectangleRounded(r, BUTTON_RADIUS, 0, base);
+        DrawRectangleRoundedLines(r, BUTTON_RADIUS, 0, TOGGLE_BORDER_THICK, border);
+
+        int text_w = font_measure(label, DEFAULT_FONT_SIZE);
+        font_draw(label, (int)(r.x + (r.width - text_w) / 2), (int)(r.y + (r.height - DEFAULT_FONT_SIZE) / 2),
+                  DEFAULT_FONT_SIZE, text);
+
+        if (hov && IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && !is_active) {
+            *active = i;
+            changed = true;
+        }
+
+        any_hover |= hov;
+        btn_x += btn_w + TOGGLE_BUTTON_GAP;
+        start = end + 1;
+    }
+
+    if (out_hover) *out_hover = any_hover;
+    return changed;
 }

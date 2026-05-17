@@ -617,16 +617,20 @@ void update_draw_frame (void)
             break;
     }
     if (show_exit_message_box) {
+        Rectangle dialog_bounds = { (float)GetScreenWidth() / 2 - EXIT_DIALOG_HALF_W,
+                                    (float)GetScreenHeight() / 2 - EXIT_DIALOG_HALF_H / 2, EXIT_DIALOG_W,
+                                    EXIT_DIALOG_H };
         bool dialog_hov;
-        int result = message_box_draw((Rectangle){ (float)GetScreenWidth() / 2 - EXIT_DIALOG_HALF_W,
-                                                   (float)GetScreenHeight() / 2 - EXIT_DIALOG_HALF_H / 2, EXIT_DIALOG_W,
-                                                   EXIT_DIALOG_H },
-                                      "Exit", "Do you really want to quit ?", "Yes;No", &dialog_hov);
+        int result
+            = message_box_draw(dialog_bounds, "Exit", "Do you really want to quit ?", "Yes;No", &dialog_hov);
         any_hover |= dialog_hov;
 
         if (result == 1)
             exit_program = true;
         else if (result == 2 || result == 0)
+            show_exit_message_box = false;
+        else if (result < 0 && IsMouseButtonPressed(MOUSE_LEFT_BUTTON)
+                 && !CheckCollisionPointRec(GetMousePosition(), dialog_bounds))
             show_exit_message_box = false;
     }
     SetMouseCursor(any_hover ? MOUSE_CURSOR_POINTING_HAND : MOUSE_CURSOR_DEFAULT);
