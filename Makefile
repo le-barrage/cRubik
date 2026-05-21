@@ -93,7 +93,7 @@ BENCH_OBJS := $(BENCH_SRCS:%.c=$(BUILDDIR)/%.o)
 
 DEPS := $(OBJS:.o=.d) $(BENCH_OBJS:.o=.d)
 
-.PHONY: all clean run rebuild help bench-run raylib raylib-clean format
+.PHONY: all clean run rebuild help bench bench-run raylib raylib-clean format
 
 all: $(TARGET)
 
@@ -102,6 +102,8 @@ $(TARGET): $(OBJS) $(RAYLIB_LIB)
 
 $(BENCH_TARGET): $(BENCH_OBJS) $(RAYLIB_LIB)
 	$(CC) $(BENCH_OBJS) -o $@ $(LDFLAGS) -Wl,--wrap=GetRandomValue $(LDLIBS)
+
+bench: $(BENCH_TARGET)
 
 bench-run: $(BENCH_TARGET)
 	./$(BENCH_TARGET)
