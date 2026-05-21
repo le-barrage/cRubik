@@ -40,7 +40,6 @@ static bool thread_needs_join = false;
 void solver_init_kociemba (void)
 {
     init();
-    srand((unsigned)time(NULL));
 }
 
 static int find_solution_and_update_moves (cube_t *cube, int depth_limit, int time_out)
@@ -84,7 +83,7 @@ static void *solver_thread_main (void *arg)
 {
     cube_t *cube = (cube_t *)arg;
     if (cube->size == 1) {
-        const char *line = FUNNY_LINES[rand() % ARRAY_LEN(FUNNY_LINES)];
+        const char *line = FUNNY_LINES[GetRandomValue(0, ARRAY_LEN(FUNNY_LINES) - 1)];
         snprintf(solver_current_solution, sizeof solver_current_solution, "%s", line);
         is_thread_launched = false;
         return NULL;
