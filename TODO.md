@@ -10,7 +10,7 @@ V1.0:
 
 - HUGE refactoring (Kociemba left)
 
-- play patterns or not
+- add an icon
 
 Other:
 
