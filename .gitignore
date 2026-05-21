@@ -1,5 +1,6 @@
 # rubiks
 cRubik
+cRubik.exe
 bench
 times/*
 !times/.gitkeep
