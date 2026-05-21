@@ -12,6 +12,12 @@ V1.0:
 
 - add an icon
 
+- fix style
+
+- get rid of raygui 
+
+- look into windows support
+
 Other:
 
 - hotreload
@@ -21,5 +27,3 @@ Other:
 - WCA-compliant random-state scrambles like [TNoodle](https://github.com/thewca/tnoodle) (current generator is random-move only)
 
 - optional Korf-style optimal solver: guaranteed shortest solution. Could be a "fast / optimal" toggle alongside Kociemba.
-
-- look into windows support
