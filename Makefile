@@ -4,6 +4,10 @@ BUILDDIR := build
 RAYLIB_SRC := vendor/raylib-6.0/src
 RAYLIB_LIB := $(BUILDDIR)/raylib/libraylib.a
 
+# Formatting
+FORMAT_EXCLUDE_DIRS := build times vendor
+FORMAT_FIND_EXCLUDE := $(foreach d,$(FORMAT_EXCLUDE_DIRS),-not -path './$(d)/*')
+
 # Platform-specific bits. $(OS) is "Windows_NT" only in MSYS2/MinGW shells.
 ifeq ($(OS),Windows_NT)
 	EXE_EXT          := .exe
@@ -89,7 +93,7 @@ BENCH_OBJS := $(BENCH_SRCS:%.c=$(BUILDDIR)/%.o)
 
 DEPS := $(OBJS:.o=.d) $(BENCH_OBJS:.o=.d)
 
-.PHONY: all clean run rebuild help bench-run raylib raylib-clean
+.PHONY: all clean run rebuild help bench-run raylib raylib-clean format
 
 all: $(TARGET)
 
@@ -116,6 +120,10 @@ raylib-clean:
 	-rm -f $(RAYLIB_SRC)/raygui.c
 	-rm -f $(RAYLIB_LIB)
 
+format:
+	find . -type f \( -name '*.c' -o -name '*.h' \) $(FORMAT_FIND_EXCLUDE) \
+	    -exec clang-format -i -style=file {} +
+
 $(BUILDDIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
@@ -140,6 +148,7 @@ help:
 	@echo "  bench-run    - Build and run $(BENCH_TARGET)"
 	@echo "  raylib       - Build raylib into $(RAYLIB_LIB)"
 	@echo "  raylib-clean - Remove raylib build artefacts (in $(RAYLIB_SRC))"
+	@echo "  format       - Format all .c/.h files (skips $(FORMAT_EXCLUDE_DIRS))"
 	@echo "  clean        - Remove all build files (including raylib)"
 	@echo "  rebuild      - Clean and rebuild"
 	@echo "  help         - Show this help"
