@@ -2,6 +2,7 @@
 cRubik
 cRubik.exe
 bench
+bench.exe
 times/*
 !times/.gitkeep
 build/*
