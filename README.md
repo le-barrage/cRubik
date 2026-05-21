@@ -147,3 +147,7 @@ or
 ```bash
 make run
 ```
+
+## Play online
+
+Browser build available on itch.io: https://le-barrage.itch.io/crubik
