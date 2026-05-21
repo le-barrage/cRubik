@@ -9,8 +9,9 @@
 #include <time.h>
 
 #ifdef _WIN32
-#include <time.h>
-static inline struct tm *localtime_r(const time_t *t, struct tm *result) {
+    #include <time.h>
+static inline struct tm *localtime_r (const time_t *t, struct tm *result)
+{
     return localtime_s(result, t) == 0 ? result : NULL;
 }
 #endif

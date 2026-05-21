@@ -4,11 +4,11 @@
 #include "font.h"
 #include "keybindings.h"
 #include "logger.h"
+#include "platform.h"
 #include "raygui.h"
 #include "raylib.h"
-#include "widgets.h"
 #include "utils.h"
-#include "platform.h"
+#include "widgets.h"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -616,12 +616,11 @@ void update_draw_frame (void)
             break;
     }
     if (show_exit_message_box) {
-        Rectangle dialog_bounds = { (float)GetScreenWidth() / 2 - EXIT_DIALOG_HALF_W,
-                                    (float)GetScreenHeight() / 2 - EXIT_DIALOG_HALF_H / 2, EXIT_DIALOG_W,
-                                    EXIT_DIALOG_H };
+        Rectangle dialog_bounds
+            = { (float)GetScreenWidth() / 2 - EXIT_DIALOG_HALF_W, (float)GetScreenHeight() / 2 - EXIT_DIALOG_HALF_H / 2,
+                EXIT_DIALOG_W, EXIT_DIALOG_H };
         bool dialog_hov;
-        int result
-            = message_box_draw(dialog_bounds, "Exit", "Do you really want to quit ?", "Yes;No", &dialog_hov);
+        int result = message_box_draw(dialog_bounds, "Exit", "Do you really want to quit ?", "Yes;No", &dialog_hov);
         any_hover |= dialog_hov;
 
         if (result == 1)
