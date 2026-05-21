@@ -1,4 +1,3 @@
-#include "amber.h"
 #include "average.h"
 #include "camera.h"
 #include "cube.h"
@@ -716,7 +715,6 @@ int main (int argc, char **argv)
     SetWindowMinSize(WINDOW_MIN_W, WINDOW_MIN_H);
     SetTargetFPS(TARGET_FPS);
 
-    GuiLoadStyleAmber();
     GuiSetStyle(DEFAULT, TEXT_SIZE, DEFAULT_FONT_SIZE);
     GuiSetStyle(DEFAULT, TEXT_SPACING, GUI_TEXT_SPACING);
     // GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, GUI_TEXT_COLOR_NORMAL);

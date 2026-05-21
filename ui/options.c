@@ -8,6 +8,7 @@
 #include "raylib.h"
 #include "widgets.h"
 #include "utils.h"
+#include "platform.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -390,8 +391,8 @@ void options_save (void)
     fclose(f);
     free(out);
 
-    if (rename(tmp_path, OPTIONS_FILE) != 0) {
-        LOG_PERROR("rename " OPTIONS_FILE);
+    if (atomic_replace(tmp_path, OPTIONS_FILE) != 0) {
+        LOG_PERROR("atomic_replace " OPTIONS_FILE);
         remove(tmp_path);
     }
 }

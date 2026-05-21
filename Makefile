@@ -6,16 +6,27 @@ RAYLIB_LIB := $(BUILDDIR)/raylib/libraylib.a
 
 # Platform-specific bits. $(OS) is "Windows_NT" only in MSYS2/MinGW shells.
 ifeq ($(OS),Windows_NT)
-	EXE_EXT       := .exe
-	PLATFORM_LIBS := -lopengl32 -lgdi32 -lwinmm
+	EXE_EXT          := .exe
+	PLATFORM_LIBS    := -lopengl32 -lgdi32 -lwinmm
+	PLATFORM_LDFLAGS := -static
+	ifndef DEBUG
+		PLATFORM_LDFLAGS += -mwindows
+	endif
 else
-	EXE_EXT       :=
-	PLATFORM_LIBS := -lGL -ldl -lrt -lX11
+	EXE_EXT          :=
+	PLATFORM_LIBS    := -lGL -ldl -lrt -lX11
+	PLATFORM_LDFLAGS :=
+endif
+
+ifeq ($(OS),Windows_NT)
+	PLATFORM_SRC := core/platform_win.c
+else
+	PLATFORM_SRC := core/platform_posix.c
 endif
 
 CFLAGS := -Wall -Wextra -Wno-unused-result -O2
 CFLAGS += -I./core -I./ui -I./solver -isystem ./vendor -isystem $(RAYLIB_SRC)
-LDFLAGS := -L$(dir $(RAYLIB_LIB))
+LDFLAGS := -L$(dir $(RAYLIB_LIB)) $(PLATFORM_LDFLAGS)
 LDLIBS := -lraylib $(PLATFORM_LIBS) -lm -lpthread
 
 # Debug flags (use: make DEBUG=1)
@@ -56,7 +67,8 @@ SRCS := \
 	ui/ui_moves.c \
 	ui/ui_patterns.c \
 	ui/widgets.c \
-	main.c
+	main.c \
+	$(PLATFORM_SRC)
 
 BENCH_SRCS := \
 	solver/kociemba/twoPhase.c \
@@ -98,7 +110,11 @@ $(RAYLIB_LIB):
 raylib: $(RAYLIB_LIB)
 
 raylib-clean:
-	-$(MAKE) -C $(RAYLIB_SRC) clean
+	-rm -f $(RAYLIB_SRC)/*.o
+	-rm -f $(RAYLIB_SRC)/libraylib.a $(RAYLIB_SRC)/libraylib.web.a
+	-rm -f $(RAYLIB_SRC)/libraylibdll.a $(RAYLIB_SRC)/raylib.dll
+	-rm -f $(RAYLIB_SRC)/raygui.c
+	-rm -f $(RAYLIB_LIB)
 
 $(BUILDDIR)/%.o: %.c
 	@mkdir -p $(dir $@)

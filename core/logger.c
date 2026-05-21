@@ -8,6 +8,13 @@
 #include <string.h>
 #include <time.h>
 
+#ifdef _WIN32
+#include <time.h>
+static inline struct tm *localtime_r(const time_t *t, struct tm *result) {
+    return localtime_s(result, t) == 0 ? result : NULL;
+}
+#endif
+
 static log_level_t current_level = LOG_LEVEL_INFO;
 static FILE *output;
 static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
